@@ -27,7 +27,7 @@ def retrieve_hybrid_documents(vector_store, query,documents,k=20):
     hybrid_retriver = hybrid_retrievers(vector_store,documents,20)
     #hybrid search
     docs = hybrid_retriver.invoke(query)
-    print(f"retrived {len(docs)} documents")
+    # print(f"retrived {len(docs)} documents")
 
     #removes duplicate documents
     unique_result = []

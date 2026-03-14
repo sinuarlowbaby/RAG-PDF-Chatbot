@@ -18,21 +18,29 @@ def vector_db(docs, embedding_model,client):
                 )
 
             )
-    else:
-        print("collection already exists")
 
-    #create vector store model
-    vector_store = QdrantVectorStore(
+        vector_store = QdrantVectorStore(
         client=client,
         embedding = embedding_model,
         collection_name = "python_docs",
     )
 
-    #add documents to vector store
-    vector_store.add_documents(
-        documents = docs,
-        ids = [str(uuid.uuid4()) for _ in range(len(docs))],
-        batch_size = 100
+        #add documents to vector store
+        vector_store.add_documents(
+            documents = docs,
+            ids = [str(uuid.uuid4()) for _ in range(len(docs))],
+            batch_size = 100
+            )
+        print("✅ successfully ingested documents to vector store")
+
+    else:
+        print("collection already exists")
+        vector_store = QdrantVectorStore(
+            client=client,
+            embedding=embedding_model,
+            collection_name="python_docs",
         )
-    print("✅ successfully ingested documents to vector store")
+
+    #create vector store model
+    
     return vector_store
