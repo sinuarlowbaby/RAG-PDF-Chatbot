@@ -22,3 +22,66 @@ This is a Retrieval-Augmented Generation (RAG) application. It loads, chunks, an
    ```bash
    python app/main.py
    ```
+I implemented:
+
+Multi-query retrieval
+
+Hybrid search (BM25 + vector)
+
+MMR retrieval
+
+Deduplication
+
+Cross-encoder reranking
+
+Token-safe context building
+
+
+What Your Current Pipeline Does
+
+Your flow currently becomes:
+
+User query
+    ↓
+Generate multiple queries
+    ↓
+Hybrid retriever (Vector MMR + BM25)
+    ↓
+Retrieve docs for each query
+    ↓
+Merge results
+    ↓
+Deduplicate
+    ↓
+Rerank documents
+    ↓
+Token-safe context builder
+    ↓
+LLM
+
+This is already a strong RAG architecture.
+
+
+Your RAG Architecture (Overall)
+
+Your pipeline flow currently is:
+
+User Query
+     │
+Multi Query Generation (LLM)
+     │
+Hybrid Retrieval
+  ├─ Vector Search (Qdrant + embeddings)
+  └─ Keyword Search (BM25)
+     │
+Deduplication
+     │
+Cross Encoder Reranking
+     │
+Token Limited Context Builder
+     │
+LLM Generation
+     │
+Final Answer
+
+This is very close to modern RAG pipelines used in industry.

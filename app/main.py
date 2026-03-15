@@ -9,16 +9,16 @@ import streamlit as st
 
 dotenv.load_dotenv()
 client = QdrantClient(url="http://localhost:6333")
-st.title("RAG")
-st.subheader("Query your documents")
-st.text_input("Enter your query",key="query")
-st.button("Submit")
-user_query = st.session_state.query
+
+user_query = "features of python"
 
 vector_store,documents = ingest_pipeline(client)
 response = query_pipeline(vector_store,user_query,documents,client)
-st.write(response)
+
 print("✅rag pipeline done")
 
+print(f"""➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️\n 
+        {response} \n
+         ➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️""")
 
-
+client.close()
