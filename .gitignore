@@ -163,7 +163,7 @@ cython_debug/
 .vscode/
 
 # Vector stores / Data
-data/
+
 chroma_db/
 faiss_index/
 *.pdf

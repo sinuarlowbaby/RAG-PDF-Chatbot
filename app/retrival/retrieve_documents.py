@@ -72,12 +72,12 @@ def retrieve_hybrid_documents(hybrid_retriver, queries,user_query,k=20):
     #removes duplicate documents
     unique_docs = deduplication(all_docs, k)
     
-    for doc in unique_docs:
-        print(doc.page_content+"\n") 
+    # for doc in unique_docs:
+    #     print(doc.page_content+"\n") 
 
 
     reranked_docs = rerank_documents(user_query,unique_docs)
-    
+
     print("➡️reranking documents...\n")
     
     context = build_context(reranked_docs)

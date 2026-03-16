@@ -14,11 +14,14 @@ def llm_client(retrived_context,user_query):
     context = {retrived_context}
 
     """
-    response = client.chat.completions.create(
+    response_generator = client.chat.completions.create(
         model= "gpt-4o",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_query},
-        ]
+        ],
+        stream =True
     )
-    return response.choices[0].message.content
+    for chunk in response_generator:
+        if chunk.choices[0].delta.content is not None:
+            yield chunk.choices[0].delta.content

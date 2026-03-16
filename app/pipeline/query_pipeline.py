@@ -30,7 +30,7 @@ def query_pipeline(vector_store,user_query,documents,client):
     print(f"total time taken: {t2 - t1:.2f}s")
 
     #Generating response from llm
-    response = llm_client(retrived_context, user_query)
+    response_generator = llm_client(retrived_context, user_query)
 
     t3 = time_calculate()
     print(f"time taken to generate response: {t3 - t2:.2f}s")
@@ -38,4 +38,4 @@ def query_pipeline(vector_store,user_query,documents,client):
 
     print("✅ response generated \n")
 
-    return response
+    return response_generator

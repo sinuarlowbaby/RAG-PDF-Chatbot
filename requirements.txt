@@ -1,0 +1,11 @@
+python-dotenv
+langchain-classic
+langchain-community
+langchain-openai
+langchain-qdrant
+langchain-text-splitters
+openai
+qdrant-client
+sentence-transformers
+streamlit
+tiktoken
