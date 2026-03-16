@@ -13,12 +13,16 @@ client = QdrantClient(url="http://localhost:6333")
 user_query = "features of python"
 
 vector_store,documents = ingest_pipeline(client)
-response = query_pipeline(vector_store,user_query,documents,client)
+while True:
+        user_query = input("Enter your query ➡️ : ")
+        if user_query == "exit":
+            break
+        response = query_pipeline(vector_store,user_query,documents,client)
 
-print("✅rag pipeline done")
+        print("✅rag pipeline done")
 
-print(f"""➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️\n 
-        {response} \n
-         ➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️""")
+        print(f"""➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️\n 
+                {response} \n
+                ➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️➡️""")
 
 client.close()
