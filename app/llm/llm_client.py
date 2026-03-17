@@ -22,6 +22,11 @@ def llm_client(retrived_context,user_query):
         ],
         stream =True
     )
+    full_response=''
     for chunk in response_generator:
         if chunk.choices[0].delta.content is not None:
             yield chunk.choices[0].delta.content
+            full_response += chunk.choices[0].delta.content
+    
+    # return full_response
+    

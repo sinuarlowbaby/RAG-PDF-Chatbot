@@ -9,3 +9,11 @@ qdrant-client
 sentence-transformers
 streamlit
 tiktoken
+redis
+langchain-redis
+langchain-core
+numpy
+scikit-learn
+pypdf
+langchain
+rank_bm25

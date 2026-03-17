@@ -1,5 +1,30 @@
 services:
+  # 1. Your Vector Database
   vector-db:
     image: qdrant/qdrant
     ports:
       - "6333:6333"
+    
+
+  # 2. Your Cache / Memory Store
+  valkey:
+    image: valkey/valkey:latest
+    container_name: valkey_db
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey_data:/data
+    restart: always
+
+  # 3. Your Python RAG Application
+  app:
+    build: .
+    depends_on:
+      - valkey
+      - vector-db  # 👈 Added this so your app waits for Qdrant too
+    environment:
+      - REDIS_URL=redis://valkey:6379
+      - QDRANT_URL=http://vector-db:6333 # 👈 Tell your app how to reach Qdrant inside Docker
+
+volumes:
+  valkey_data:
