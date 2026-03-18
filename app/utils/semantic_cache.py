@@ -10,63 +10,72 @@ redis_client = redis.Redis(
     host="localhost", 
     port=6379, 
     db=0,
-    decode_responses=True
-    )
+    decode_responses=True,
+    socket_timeout=0.1,
+    socket_connect_timeout=0.1,
+    retry_on_timeout=False,
+)
 
-
-
-# def cosine_similarity(vec1, vec2):
-#     #measure similarity between two vectors
-
-#     vec1 = np.array(vec1)
-#     vec2 = np.array(vec2)
-
-#     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-
+def redis_available():
+    try:
+        return redis_client.ping()
+    except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError, redis.exceptions.RedisError):
+        return False
 
 def semantic_cache_match(user_query_embedding,treshold=0.8):
-    keys = redis_client.keys("semantic_cache:*")
-    for key in keys:
-        data = json.loads(redis_client.get(key))
-        cached_embedding = data["embedding"]
-        cached_context = data["context"]    # context created from pdf
-        cached_response = data["response"]  # llm generated response for the context
+    if not redis_available():
+        return None
 
-        similarity_score = cosine_similarity(
-            [cached_embedding],
-            [user_query_embedding]
-            )[0][0]
+    try:
+        keys = redis_client.scan_iter("semantic_cache:*")
+        for key in keys:
+            data = json.loads(redis_client.get(key))
+            cached_embedding = data["embedding"]
+            cached_context = data["context"]    # context created from pdf
+            cached_response = data["response"]  # llm generated response for the context
 
-        if similarity_score > treshold:
-            return cached_response
-    
-    return None
+            similarity_score = cosine_similarity(
+                [cached_embedding],
+                [user_query_embedding]
+                )[0][0]
+
+            if similarity_score > treshold:
+                return cached_response
+            else:
+                print("⚡ Semantic cache miss")
+        return None
+    except redis.exceptions.RedisError:
+        return None
 
 
 def store_semantic_cache(user_query,query_embedding,context,response):
-    
-    if hasattr(query_embedding,'tolist'):
-        query_embedding = query_embedding.tolist()
-    if hasattr(context,'tolist'):
-        context = context.tolist()
-    if hasattr(response,'tolist'):
-        response = response.tolist()
+    if not redis_available():
+        return False
 
-    data={
-        "user_query":user_query,
-        "embedding":query_embedding,
-        "context":context,
-        "response":response,
-        "created_at":datetime.datetime.now().isoformat()
-    }
+    try:
+        if hasattr(query_embedding,'tolist'):
+            query_embedding = query_embedding.tolist()
+        if hasattr(context,'tolist'):
+            context = context.tolist()
+        if hasattr(response,'tolist'):
+            response = response.tolist()
 
-    key = f"semantic_cache:{uuid.uuid4()}"
-    
-    redis_client.set(
-        key,
-        json.dumps(data),
-        ex=3600
-    )
+        data={
+            "user_query":user_query,
+            "embedding":query_embedding,
+            "context":context,
+            "response":response,
+            "created_at":datetime.datetime.now().isoformat()
+        }
 
-    return True
-    
+        key = f"semantic_cache:{uuid.uuid4()}"
+        
+        redis_client.set(
+            key,
+            json.dumps(data),
+            ex=3600
+        )
+
+        return True
+    except redis.exceptions.RedisError:
+        return False

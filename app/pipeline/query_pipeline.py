@@ -7,7 +7,8 @@ import openai
 from retrival.user_query_embedding import user_query_embedding
 from retrival.reranker import rerank_documents
 from retrival.build_context import build_context
-from utils.semantic_cache import semantic_cache_match,store_semantic_cache
+from utils.semantic_cache import semantic_cache_match,store_semantic_cache,redis_available
+
 
 def query_pipeline(vector_store,user_query,documents,client,hybrid_retriver):
     t1 = time_calculate()
@@ -20,6 +21,7 @@ def query_pipeline(vector_store,user_query,documents,client,hybrid_retriver):
     for query in queries:
         all_query += query + ' '
 
+    
     #Embedding user query for caching
     user_query_embeddings = user_query_embedding(all_query)
     
@@ -32,7 +34,7 @@ def query_pipeline(vector_store,user_query,documents,client,hybrid_retriver):
             yield chunk
         return
 
-    print("⚡ Semantic cache miss")
+    # print("⚡ Semantic cache miss")
 
 
     print(f"""💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪\n 
@@ -71,17 +73,19 @@ def query_pipeline(vector_store,user_query,documents,client,hybrid_retriver):
         full_response += chunk
         yield chunk
        
-    t3 = time_calculate()
-    print(f"time taken to generate response: {t3 - t2:.2f}s")
-    print(f"total time taken: {t3 - t1:.2f}s")
-
+    
     print("✅ response generated \n")
 
     #storing semantic cache
-    save_cache = store_semantic_cache(user_query,user_query_embeddings,retrived_context,full_response)
+    if redis_available():
+        save_cache = store_semantic_cache(user_query,user_query_embeddings,retrived_context,full_response)
 
-    if save_cache:
-        print("⚡ Semantic cache stored for 1 hour")
-    else:
-        print("⚡ Semantic cache not stored")
+        if save_cache:
+            print("⚡ Semantic cache stored for 1 hour")
+            save_cache=False
+        else:
+            print("⚡ Semantic cache not stored")
+    t3 = time_calculate()
+    print(f"time taken to generate response: {t3 - t2:.2f}s")
+    print(f"total time taken: {t3 - t1:.2f}s")
 
