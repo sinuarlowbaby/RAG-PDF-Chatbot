@@ -23,7 +23,7 @@ services:
   app:
     build: .
     ports:
-      - "8501:8501"
+      - "8000:8000"
     depends_on:
       - valkey
       - vector-db  # 👈 Added this so your app waits for Qdrant too

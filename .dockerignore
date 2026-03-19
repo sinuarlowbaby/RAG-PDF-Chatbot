@@ -1,0 +1,30 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Virtual environment (HUGE — never copy this)
+.venv/
+venv/
+env/
+
+# Secrets (NEVER bake .env into image)
+.env
+
+# Git
+.git/
+.gitignore
+
+# VS Code
+.vscode/
+
+# Dead code
+old_main.py
+
+# Logs
+*.log
+
+# Vector stores / Data
+chroma_db/
+faiss_index/

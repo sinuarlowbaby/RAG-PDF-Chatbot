@@ -173,3 +173,8 @@ faiss_index/
 
 # Mac OS X
 .DS_Store
+
+#testing
+app/old_main.py
+app/streamlit_app.py
+app/fastapi_app.py

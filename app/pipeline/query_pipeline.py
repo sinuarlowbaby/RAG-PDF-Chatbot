@@ -1,16 +1,16 @@
-from retrival.hybrid_document_retrival import retrieve_hybrid_documents,initialize_retrievers,deduplication
+from retrieval.hybrid_document_retrieval import retrieve_hybrid_documents,initialize_retrievers,deduplication
 from llm.llm_client import llm_client
 from qdrant_client import QdrantClient
 from utils.time_calculate import time_calculate
 from llm.multi_query import generate_queries
 import openai
-from retrival.user_query_embedding import user_query_embedding
-from retrival.reranker import rerank_documents
-from retrival.build_context import build_context
+from retrieval.user_query_embedding import user_query_embedding
+from retrieval.reranker import rerank_documents
+from retrieval.build_context import build_context
 from utils.semantic_cache import semantic_cache_match,store_semantic_cache,redis_available
 
 
-def query_pipeline(vector_store,user_query,documents,client,hybrid_retriver):
+def query_pipeline(vector_store,user_query,documents,client,hybrid_retriever):
     t1 = time_calculate()
 
     
@@ -37,14 +37,14 @@ def query_pipeline(vector_store,user_query,documents,client,hybrid_retriver):
     # print("⚡ Semantic cache miss")
 
 
-    print(f"""💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪\n 
-        {queries} \n
-         💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪""")
+    # print(f"""💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪\n 
+    #     {queries} \n
+    #      💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪""")
 
-    #Retriving relevent documents from vector store
+    # #Retriving relevent documents from vector store
 
 
-    all_docs = retrieve_hybrid_documents(hybrid_retriver, queries,user_query)
+    all_docs = retrieve_hybrid_documents(hybrid_retriever, queries,user_query)
 
     unique_docs = deduplication(all_docs, k=20)
 
@@ -55,9 +55,9 @@ def query_pipeline(vector_store,user_query,documents,client,hybrid_retriver):
     
     retrived_context = build_context(reranked_docs)
 
-    print(f"""💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪\n 
-        {retrived_context} \n
-         💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪""")
+    # print(f"""💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪\n 
+    #     {retrived_context} \n
+    #      💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪💪""")
 
 
     t2 = time_calculate()

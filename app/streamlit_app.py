@@ -1,87 +1,70 @@
 import os
 import dotenv
-import streamlit as st
-import openai
-from qdrant_client import QdrantClient
 
-# Import your pipeline modules
-from retrival.hybrid_document_retrival import initialize_retrievers
+from retrieval.hybrid_document_retrieval import initialize_retrievers
+from langchain_openai import OpenAIEmbeddings
+from qdrant_client import QdrantClient
 from pipeline.ingest_pipeline import ingest_pipeline
 from pipeline.query_pipeline import query_pipeline
+import streamlit as st
+import openai
 
 dotenv.load_dotenv()
 
-# Build the layout and appearance
 st.set_page_config(page_title="RAG PDF Chatbot", page_icon="🤖")
 st.title("🤖 RAG PDF Chatbot")
+st.subheader("Powered by Qdrant and GPT-4o")
 
-# Streamlit caches this so that it doesn't re-embed or re-ingest documents on every chat interaction
 @st.cache_resource
 def init_rag_pipeline():
-    # Retrieve Qdrant URL dynamically
-    qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
-    client = QdrantClient(url=qdrant_url)
-    
-    # Ingest pipeline
-    vector_store, documents = ingest_pipeline(client)
-    
-    # Initialization of retriever
-    hybrid_retriever = initialize_retrievers(vector_store, documents, 20)
-    
-    return client, vector_store, documents, hybrid_retriever
+    try:
+        client = QdrantClient(url="http://localhost:6333")
+        vector_store,documents = ingest_pipeline(client)
+        hybrid_retriver = initialize_retrievers(vector_store,documents,20)
+        return client, vector_store, documents, hybrid_retriver
+    except Exception as e:
+        st.error(f"❌ Error initializing RAG pipeline: {e}")
+        st.stop()
 
-# Show a loading spinner during heavy startup operations
-with st.spinner("Initializing the RAG Pipeline..."):
-    client, vector_store, documents, hybrid_retriever = init_rag_pipeline()
+# Build the layout and appearance   
+try:
+    with st.sidebar:
+        st.header("⚙️ Settings")
+        st.markdown("**Model:** GPT-4o")
+        st.markdown("**Vector DB:** Qdrant")
+        st.markdown("**Search:** Hybrid (MMR + BM25)")
+        st.divider()
+        st.caption("Built with LangChain + OpenAI")
 
 
-# Session state is used to keep track of the conversation across app reruns
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    with st.spinner("Loading documents into vector store..."):
+        client, vector_store, documents, hybrid_retriver = init_rag_pipeline()
 
-# Display previous chat history
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    st.success("✅ Documents loaded successfully!")
 
-# Chat input from the user
-prompt = st.chat_input("Enter your query ➡️")
 
-if prompt:
-    # 1. Display user's question and add to history
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    user_query = st.text_input("☁️ Enter your question here : ")
 
-    # 2. Get and display the bot's streamed response
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        full_response = ""
+    if st.button("Ask") and user_query:
+        with st.spinner("Generating response..."):
+            full_response = ''
+            placeholder = st.empty()
+            try:
+                response_generator = query_pipeline(vector_store, user_query, documents, client, hybrid_retriver)
+                st.markdown("### 🤖 ###")
         
-        try:
-            # Ask the generator for chunks of the response
-            response_generator = query_pipeline(
-                vector_store, 
-                prompt, 
-                documents, 
-                client, 
-                hybrid_retriever
-            )
-            
-            # Display incoming chunks in an animated fashion
-            for chunk in response_generator:
-                full_response += chunk
-                message_placeholder.markdown(full_response + "▌")
-            
-            # Print the final result without the cursor
-            message_placeholder.markdown(full_response)
-            
-        except openai.APITimeoutError:
-            full_response = "❌ Timeout Error: OpenAI took too long to respond."
-            message_placeholder.error(full_response)
-        except Exception as e:
-            full_response = f"❌ Error generating response: {e}"
-            message_placeholder.error(full_response)
+                for chunk in response_generator:
+                    full_response += chunk
+                    placeholder.markdown(full_response +" ▌")
+                placeholder.markdown(full_response)
 
-    # 3. Add bot answer to history
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+            except openai.APITimeoutError:
+                print("\n❌ [Timeout Error]: OpenAI took too long to respond. Please try again.")
+            except openai.APIStatusError as e:
+                print(f"\n❌ [API Error]: OpenAI returned an error status: {e.status_code}")
+            except Exception as e:
+                print(f"\n❌ [Unexpected Error]: Something broke during the stream: {e}")
+            
+except Exception as e:
+    st.error(f"❌ Error: {e}")
+
