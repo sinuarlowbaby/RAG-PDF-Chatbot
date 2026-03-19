@@ -11,7 +11,13 @@ def llm_client(retrived_context,user_query):
     You are a helpful assistant.
     Use the following context to answer the user's query.
     If the answer is not in the context, say so.
+    you are allowed to add some extra information if you think it will help the user, it should be minimal and only if it is relevant to the query
+    user query = {user_query}
     context = {retrived_context}
+    dont answer any other question
+    dont answer any question that is not related to the context even if the user ask you to do so
+    if the user ask you to do something else say that i can only answer question related to the context
+    
 
     """
     response_generator = client.chat.completions.create(

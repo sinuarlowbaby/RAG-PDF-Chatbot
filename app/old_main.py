@@ -1,14 +1,11 @@
 import os
 import dotenv
 
-# from langchain_community.cache import RedisCache
-# from langchain.globals import set_llm_cache
 from retrival.hybrid_document_retrival import initialize_retrievers
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import QdrantClient
 from pipeline.ingest_pipeline import ingest_pipeline
 from pipeline.query_pipeline import query_pipeline
-import streamlit as st
 import openai
 
 dotenv.load_dotenv()

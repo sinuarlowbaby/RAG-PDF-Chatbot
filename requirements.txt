@@ -1,4 +1,6 @@
 python-dotenv
+langchain_core
+
 langchain-classic
 langchain-community
 langchain-openai
@@ -7,13 +9,10 @@ langchain-text-splitters
 openai
 qdrant-client
 sentence-transformers
-streamlit
 tiktoken
 redis
-langchain-redis
-langchain-core
 numpy
 scikit-learn
 pypdf
-langchain
 rank_bm25
+streamlit

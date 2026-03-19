@@ -20,7 +20,7 @@ This is a Retrieval-Augmented Generation (RAG) application. It loads, chunks, an
 3. Set your environment variables in `.env`.
 4. Run the main processing script:
    ```bash
-   python app/main.py
+   streamlit run app/app.py
    ```
 I implemented:
 
