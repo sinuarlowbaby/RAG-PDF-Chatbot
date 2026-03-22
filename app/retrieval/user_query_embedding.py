@@ -1,14 +1,15 @@
-from langchain_openai import OpenAIEmbeddings
+from openai import AsyncOpenAI
 import dotenv
 import os
 
 dotenv.load_dotenv()
 
-def user_query_embedding(user_query):
-    embedding_model = OpenAIEmbeddings(
-        model="text-embedding-3-small",
-        chunk_size=100
-        )
+async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    embedding = embedding_model.embed_query(user_query)
-    return embedding
+
+async def user_query_embedding(user_query: str) -> list:
+    response = await async_client.embeddings.create(
+        model="text-embedding-3-small",
+        input=user_query,
+    )
+    return response.data[0].embedding

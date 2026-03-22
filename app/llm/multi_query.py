@@ -1,13 +1,15 @@
-from openai import OpenAI
+from openai import AsyncOpenAI
+import asyncio
 import dotenv
-import os,json
+import os
+import json
 
 dotenv.load_dotenv()
 
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def generate_queries(user_query,n_queries=4):
+async def generate_queries(user_query, n_queries=4):
     SYSTEM_PROMPT = f"""
         You are a search query generator.
 
@@ -23,19 +25,20 @@ def generate_queries(user_query,n_queries=4):
             ["query1", "query2", "query3", "query4"]
         """
 
-
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role":"system", "content":SYSTEM_PROMPT},
-            {"role":"user", "content":user_query}
-            ],
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_query}
+        ],
         temperature=0.3
     )
     try:
         queries=json.loads(response.choices[0].message.content)
-    except:
+        if not isinstance (queries,list):
+            raise ValueError("Expected a JSON list from LLM")
+    except (json.JSONDecodeError, ValueError, KeyError) as e:
+        print(f"⚠️ Query generation parse failed, falling back to original query: {e}")
         queries=[user_query]
-        
-    return queries
 
+    return queries

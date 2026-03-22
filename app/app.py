@@ -3,11 +3,10 @@ import dotenv
 
 from schema.llm_schemas import QueryRequest,HealthResponse
 from retrieval.hybrid_document_retrieval import initialize_retrievers
-from langchain_openai import OpenAIEmbeddings
 from qdrant_client import QdrantClient
 from pipeline.ingest_pipeline import ingest_pipeline
 from pipeline.query_pipeline import query_pipeline
-import openai
+import asyncio
 import logging
 from fastapi import FastAPI,HTTPException
 from contextlib import asynccontextmanager
@@ -21,14 +20,16 @@ dotenv.load_dotenv()
 logging.basicConfig(level=logging.INFO,format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
+
 app_state = {}
 
 @asynccontextmanager
 async def lifespan(app : FastAPI):
     logger.info("Starting RAG pipeline...")
     try:
-        client = QdrantClient(url="http://localhost:6333")
-        vector_store,documents = ingest_pipeline(client)
+        client = QdrantClient(url=qdrant_url)
+        vector_store,documents = await ingest_pipeline(client)
         hybrid_retriever = initialize_retrievers(vector_store,documents,20)
 
         app_state["client"] = client
@@ -51,7 +52,12 @@ async def lifespan(app : FastAPI):
     logger.info("✅ RAG pipeline shut down successfully")    
 
 
-app =FastAPI(title="RAG PDF Chatbot",description="RAG PDF Chatbot",version="1.0.0",lifespan=lifespan)
+app =FastAPI(
+    title="RAG PDF Chatbot",
+    description="RAG PDF Chatbot",
+    version="1.0.0",
+    lifespan=lifespan,
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,17 +75,15 @@ async def ask(query:QueryRequest):
     
     logger.info(f"Received question: {query.question[:50]}")
 
-    def stream_token():
+    async def stream_token():
         try:
-            response_generator = query_pipeline(
+            async for chunk in query_pipeline(
                 app_state["vector_store"],
                 query.question,
                 app_state["documents"],
                 app_state["client"],
-            app_state["hybrid_retriever"]
-        )
-
-            for chunk in response_generator:
+                app_state["hybrid_retriever"]
+            ):
                 yield f"data: {chunk}\n\n"
             yield "data: [DONE]\n\n"
 

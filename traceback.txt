@@ -1,0 +1,14 @@
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|##########| 201/201 [00:00<00:00, 2810.35it/s]
+[1mXLMRobertaForSequenceClassification LOAD REPORT[0m from: BAAI/bge-reranker-base
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+Traceback (most recent call last):
+  File "d:\PROJECT\Python\RAG-PDF-Chatbot\test_import.py", line 5, in <module>
+    import app.app
+ModuleNotFoundError: No module named 'app.app'; 'app' is not a package
+
+FAILED WITH ERROR:

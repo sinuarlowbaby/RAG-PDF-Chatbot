@@ -23,8 +23,5 @@ def doc_chunker(documents):
         doc.metadata["source"] = "python_pdf"
         doc.metadata["type"] = "documentation"
         doc.metadata["page"] = doc.metadata.get("page", 0) + 1
-        doc.metadata["category"] = "programming"
-        doc.metadata["language"] = "python"
-        doc.metadata["doc_type"] = "official_documentation"
         
     return docs

@@ -1,12 +1,12 @@
-from openai import OpenAI
+from openai import AsyncOpenAI
 import dotenv
 import os
+import asyncio
 
 dotenv.load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
-def llm_client(retrived_context,user_query):
+async def llm_client(retrived_context,user_query):
     SYSTEM_PROMPT = f"""
     You are a helpful assistant.
     Use the following context to answer the user's query.
@@ -17,10 +17,8 @@ def llm_client(retrived_context,user_query):
     dont answer any other question
     dont answer any question that is not related to the context even if the user ask you to do so
     if the user ask you to do something else say that i can only answer question related to the context
-    
-
     """
-    response_generator = client.chat.completions.create(
+    response_generator = await client.chat.completions.create(
         model= "gpt-4o",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -29,10 +27,7 @@ def llm_client(retrived_context,user_query):
         stream =True
     )
     full_response=''
-    for chunk in response_generator:
+    async for chunk in response_generator:
         if chunk.choices[0].delta.content is not None:
             yield chunk.choices[0].delta.content
             full_response += chunk.choices[0].delta.content
-    
-    # return full_response
-    
