@@ -3,25 +3,29 @@ import re
 
 def clean_text(text):
     text = re.sub(r"\s+", " ", text)
-    text = re.sub(r"Python Tutorial, Release.*", "", text)
-    text = re.sub(r"\d+ Chapter.*", "", text)
-    text = re.sub(". . . . . . . . ", "", text)
+    text = re.sub(r". . . . . . . . ", "", text)
     return text.strip()
 
-def doc_chunker(documents):
+def doc_chunker(raw_documents,session_id):
     text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=500,
-    chunk_overlap=100,
+    chunk_size=1000,
+    chunk_overlap=200,
     length_function=len,
     is_separator_regex=False,
     separators=["\n\n", "\n", ".", " "]
     )
 
-    docs= text_splitter.split_documents(documents)
-    for doc in docs:
+    chunks = text_splitter.split_documents(raw_documents)
+    for i,doc in enumerate(chunks):
         doc.page_content = clean_text(doc.page_content)
-        doc.metadata["source"] = "python_pdf"
-        doc.metadata["type"] = "documentation"
-        doc.metadata["page"] = doc.metadata.get("page", 0) + 1
-        
-    return docs
+
+        doc.metadata.update({
+            "chunk_number":i,
+            "session_id":session_id,
+            "chunk_id": str(uuid.uuid4()),
+            "source":doc.metadata["source"],
+            "page":doc.metadata["page"],
+            "file_name":Path(doc.metadata["source"]).name,
+            "timestamp":datetime.now().isoformat(),
+            })
+    return chunks

@@ -1,13 +1,12 @@
 from sentence_transformers import CrossEncoder
-import asyncio
 
 reranker= CrossEncoder('BAAI/bge-reranker-base')
 
-async def rerank_documents(user_query,unique_docs,top_n=5):
+def rerank_documents(user_query,unique_docs,top_n=5):
 
     pairs = [(user_query, doc.page_content) for doc in unique_docs]
 
-    scores = await asyncio.to_thread(reranker.predict,pairs)
+    scores = reranker.predict(pairs)
 
     scored_docs = [(doc,score) for doc ,score in zip(unique_docs,scores)]
 

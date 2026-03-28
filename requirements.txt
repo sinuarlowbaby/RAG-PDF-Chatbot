@@ -1,4 +1,6 @@
 python-dotenv
+langchain_core
+
 langchain
 langchain-community
 langchain-openai
@@ -13,7 +15,6 @@ numpy
 scikit-learn
 pypdf
 rank_bm25
+streamlit
 fastapi
-uvicorn[standard]
-pydantic
-langchain-classic
+uvicorn

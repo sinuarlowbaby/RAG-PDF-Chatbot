@@ -20,9 +20,7 @@ env/
 .vscode/
 
 # Dead code
-app/old_main.py
-app/streamlit_app.py
-
+old_main.py
 
 # Logs
 *.log

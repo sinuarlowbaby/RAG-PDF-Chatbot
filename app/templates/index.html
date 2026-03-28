@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error-container": "#a70138",
+                        "surface-container-lowest": "#000000",
+                        "outline": "#6d758c",
+                        "error-dim": "#d73357",
+                        "surface-container-high": "#141f38",
+                        "primary-fixed": "#8d98ff",
+                        "tertiary-container": "#a589f8",
+                        "on-surface": "#dee5ff",
+                        "on-background": "#dee5ff",
+                        "outline-variant": "#40485d",
+                        "on-tertiary": "#31067e",
+                        "on-secondary-fixed": "#004840",
+                        "surface-bright": "#1f2b49",
+                        "secondary-fixed-dim": "#50ebd5",
+                        "background": "#060e20",
+                        "surface-tint": "#9fa7ff",
+                        "on-primary-fixed": "#000000",
+                        "primary-container": "#8d98ff",
+                        "secondary-dim": "#50ebd5",
+                        "secondary-fixed": "#62fae3",
+                        "primary-dim": "#8a95ff",
+                        "tertiary-fixed": "#baa3ff",
+                        "on-secondary-fixed-variant": "#00675c",
+                        "tertiary": "#b299ff",
+                        "on-tertiary-fixed": "#1d0054",
+                        "surface": "#060e20",
+                        "primary-fixed-dim": "#7f8af6",
+                        "on-tertiary-fixed-variant": "#41208e",
+                        "on-primary-fixed-variant": "#0c1889",
+                        "inverse-primary": "#4954bc",
+                        "secondary-container": "#006b5f",
+                        "surface-container-highest": "#192540",
+                        "surface-container-low": "#091328",
+                        "tertiary-fixed-dim": "#ad92ff",
+                        "inverse-surface": "#faf8ff",
+                        "on-secondary": "#005c52",
+                        "surface-dim": "#060e20",
+                        "error": "#ff6e84",
+                        "on-surface-variant": "#a3aac4",
+                        "tertiary-dim": "#a88cfb",
+                        "primary": "#9fa7ff",
+                        "inverse-on-surface": "#4d556b",
+                        "on-primary-container": "#000a7b",
+                        "surface-variant": "#192540",
+                        "on-tertiary-container": "#230062",
+                        "secondary": "#62fae3",
+                        "surface-container": "#0f1930",
+                        "on-error": "#490013",
+                        "on-error-container": "#ffb2b9",
+                        "on-primary": "#101b8b",
+                        "on-secondary-container": "#dcfff7"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #060e20;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(159, 167, 255, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(98, 250, 227, 0.08) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(178, 153, 255, 0.08) 0px, transparent 50%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(25, 37, 64, 0.3);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(159, 167, 255, 0.15);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="font-body text-on-surface selection:bg-primary/30">
+<div class="flex h-screen w-full">
+<!-- Sidebar: Compact & Clean -->
+<aside class="w-64 border-r border-white/5 bg-black/20 backdrop-blur-2xl flex flex-col z-50">
+<div class="p-5 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-teal-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-background text-lg font-bold" data-icon="hub">hub</span>
+</div>
+<h1 class="text-sm font-bold tracking-tight text-white/90">Aether RAG</h1>
+</div>
+<div class="px-3 pb-4">
+<button class="w-full bg-white/5 hover:bg-white/10 text-white/70 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2 border border-white/5">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                    New Session
+                </button>
+</div>
+<nav class="flex-1 px-3 space-y-6 overflow-y-auto custom-scrollbar">
+<div>
+<p class="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-2 px-2">Navigation</p>
+<div class="space-y-0.5">
+<a class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/10 text-white text-xs font-medium transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="chat_bubble">chat_bubble</span>
+                            Conversations
+                        </a>
+<a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/5 text-xs font-medium transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="folder">folder</span>
+                            Collections
+                        </a>
+<a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/5 text-xs font-medium transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="analytics">analytics</span>
+                            Analytics
+                        </a>
+</div>
+</div>
+<div>
+<div class="flex items-center justify-between px-2 mb-2">
+<p class="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Recent History</p>
+<span class="material-symbols-outlined text-[14px] text-white/30 cursor-pointer" data-icon="history">history</span>
+</div>
+<div class="space-y-0.5">
+<a class="block px-3 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/5 text-xs truncate transition-all" href="#">Q3 User Feedback Synthesis</a>
+<a class="block px-3 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/5 text-xs truncate transition-all" href="#">API Integration Roadmap</a>
+<a class="block px-3 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/5 text-xs truncate transition-all" href="#">Market Competitive Audit</a>
+</div>
+</div>
+</nav>
+<div class="p-4 mt-auto border-t border-white/5">
+<div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
+<img alt="User profile" class="w-6 h-6 rounded-full bg-indigo-500/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpHEGBOTadYzh7zMOlkpb0sTPzGts_5MDdI_I28gNOu4Rv3cpmGaUURcXvHk2QhpS9Rzsen8aS8LHHZOMN-YVafi8joNmUF3SIXqfPFY5xPpsKhURZ3_mvk7H2cqdvkLJg0YdHm2RbkFR-Hg83ymk4XBWbaHMol0zKWmkVeYZ0XMcCzxr_YgwQZiIkfCVj1XVL1HifpWZyqPfCxm50B4NYQ1RnjMIlKCGoEzsnIX03K5AE7v9M33i5UluHEwiRbjcIkAOXDjHp9R0"/>
+<div class="flex-1 min-w-0">
+<p class="text-[11px] font-bold text-white truncate">Alex Rivers</p>
+</div>
+<span class="material-symbols-outlined text-[16px] text-white/30" data-icon="settings">settings</span>
+</div>
+</div>
+</aside>
+<!-- Main Content: Integrated Chat & Knowledge -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Central Conversation Area -->
+<section class="flex-1 flex flex-col min-w-0 relative">
+<!-- Slim Top Header -->
+<header class="h-14 flex items-center justify-between px-8 border-b border-white/5 bg-black/10">
+<div class="flex items-center gap-4">
+<span class="text-xs font-medium text-white/40">Active Session:</span>
+<span class="text-xs font-semibold text-white/80">Q3 Product Performance Research</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1 bg-teal-400/10 px-2 py-1 rounded text-[10px] text-teal-400 font-bold uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-teal-400"></span>
+                            GPT-4 Omni
+                        </div>
+<button class="p-1.5 text-white/40 hover:text-white transition-all">
+<span class="material-symbols-outlined text-[20px]" data-icon="share">share</span>
+</button>
+</div>
+</header>
+<!-- Messages -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-8 pb-36">
+<div class="max-w-3xl mx-auto space-y-10">
+<!-- Welcome Message -->
+<div class="text-center py-8">
+<h2 class="text-3xl font-headline font-extrabold tracking-tight text-white mb-2">How can I assist your research?</h2>
+<p class="text-xs text-white/40 font-medium">Context: 14 documents in <span class="text-primary-fixed">Product Design</span> &amp; <span class="text-secondary-fixed">Market Research</span></p>
+</div>
+<!-- User -->
+<div class="flex justify-end">
+<div class="bg-indigo-500/10 border border-indigo-500/20 px-5 py-3 rounded-2xl rounded-tr-none max-w-[85%]">
+<p class="text-sm text-white/90 leading-relaxed">Summarize the key findings from the Q3 User Feedback Report and link them to our current design sprint objectives.</p>
+</div>
+</div>
+<!-- AI Response -->
+<div class="flex items-start gap-4">
+<div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/30">
+<span class="material-symbols-outlined text-indigo-400 text-sm" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div class="flex-1 space-y-4 max-w-[90%]">
+<div class="text-sm text-white/90 leading-relaxed space-y-4">
+<p>Based on the <span class="group relative cursor-help inline-flex items-center bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-[10px] font-bold text-secondary-dim transition-all hover:bg-white/10">
+                                        Q3_Feedback_Final.pdf
+                                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-surface-bright backdrop-blur-xl border border-white/10 rounded-lg text-[10px] leading-tight text-white opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                                            Primary source document containing 450 verified user interviews.
+                                        </span>
+</span>, the main friction point is the complex onboarding for technical users.</p>
+<ul class="list-disc list-inside space-y-2 ml-1 text-white/60 text-sm">
+<li>Drop-off rate increased by 14% at the "API Key Integration" step.</li>
+<li>Users reported high satisfaction with "Smart Prompt" but found it hard to locate.</li>
+</ul>
+<p>To align with <span class="group relative cursor-help inline-flex items-center bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-[10px] font-bold text-primary-dim transition-all hover:bg-white/10">
+                                        Sprint_Goals_v2.docx
+                                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-surface-bright backdrop-blur-xl border border-white/10 rounded-lg text-[10px] leading-tight text-white opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                                            Internal document defining Q4 sprint deliverables.
+                                        </span>
+</span>, we should prioritize the "Guided API Setup" component.</p>
+</div>
+<div class="flex items-center gap-4 pt-2">
+<button class="flex items-center gap-1.5 text-[10px] font-bold text-white/30 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[14px]" data-icon="content_copy">content_copy</span>
+                                        Copy
+                                    </button>
+<button class="flex items-center gap-1.5 text-[10px] font-bold text-white/30 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[14px]" data-icon="thumb_up">thumb_up</span>
+                                        Helpful
+                                    </button>
+<button class="flex items-center gap-1.5 text-[10px] font-bold text-white/30 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[14px]" data-icon="thumb_down">thumb_down</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Input Area: Clean & Focused -->
+<div class="absolute bottom-0 left-0 right-0 p-6 pointer-events-none">
+<div class="max-w-3xl mx-auto glass-panel rounded-2xl shadow-2xl pointer-events-auto overflow-hidden">
+<div class="flex items-center p-4">
+<textarea class="flex-1 bg-transparent border-none focus:ring-0 py-1 text-sm text-on-surface resize-none h-6 overflow-hidden placeholder:text-white/20" placeholder="Ask Aether about your documents..."></textarea>
+<button class="w-8 h-8 rounded-lg bg-primary text-on-primary flex items-center justify-center hover:scale-105 transition-all">
+<span class="material-symbols-outlined text-[20px]" data-icon="arrow_upward">arrow_upward</span>
+</button>
+</div>
+<div class="px-4 pb-3 flex items-center justify-between border-t border-white/5 pt-3">
+<div class="flex items-center gap-6">
+<!-- Temperature Slider: Only remaining setting toggle/slider as requested -->
+<div class="flex items-center gap-3">
+<span class="text-[9px] font-bold text-white/30 uppercase tracking-widest">Temperature</span>
+<div class="relative flex items-center">
+<input class="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-400" max="100" min="0" type="range" value="70"/>
+</div>
+<span class="text-[9px] font-bold text-indigo-300">0.7</span>
+</div>
+<div class="h-3 w-[1px] bg-white/10"></div>
+<div class="flex items-center gap-2 text-[9px] font-bold text-white/40 uppercase tracking-widest">
+<span class="material-symbols-outlined text-[14px] text-indigo-400" data-icon="attachment">attachment</span>
+                                    2 Files Linked
+                                </div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1 text-white/30 hover:text-white transition-all">
+<span class="material-symbols-outlined text-[16px]" data-icon="mic">mic</span>
+</button>
+<button class="p-1 text-white/30 hover:text-white transition-all">
+<span class="material-symbols-outlined text-[16px]" data-icon="image">image</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Knowledge Sidebar -->
+<section class="w-80 border-l border-white/5 bg-black/10 backdrop-blur-xl flex flex-col">
+<div class="p-6 border-b border-white/5">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Knowledge Base</h3>
+<span class="text-[10px] text-white/20">14 Sources</span>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-white/20 text-[16px]" data-icon="search">search</span>
+<input class="w-full bg-white/5 border-none rounded-lg pl-8 py-2 text-[11px] text-white placeholder:text-white/20 focus:ring-1 focus:ring-white/10" placeholder="Filter sources..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1">
+<!-- Source Item -->
+<div class="group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
+<div class="w-7 h-7 rounded bg-white/5 flex items-center justify-center border border-white/5 shrink-0">
+<span class="material-symbols-outlined text-[16px] text-indigo-400" data-icon="description">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-[11px] font-medium text-white/80 truncate">Q3_Feedback_Final.pdf</p>
+<p class="text-[9px] text-white/30">2h ago</p>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-teal-400 opacity-50"></span>
+</div>
+<!-- Source Item -->
+<div class="group flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 transition-all cursor-pointer">
+<div class="w-7 h-7 rounded bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20 shrink-0">
+<span class="material-symbols-outlined text-[16px] text-indigo-300" data-icon="article">article</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-[11px] font-medium text-indigo-100 truncate">Sprint_Goals_v2.docx</p>
+<p class="text-[9px] text-indigo-300/40">5h ago</p>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+</div>
+<!-- Source Item -->
+<div class="group flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
+<div class="w-7 h-7 rounded bg-white/5 flex items-center justify-center border border-white/5 shrink-0">
+<span class="material-symbols-outlined text-[16px] text-indigo-400" data-icon="pie_chart">pie_chart</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-[11px] font-medium text-white/80 truncate">Market_Analysis_24.csv</p>
+<p class="text-[9px] text-white/30">1d ago</p>
+</div>
+</div>
+</div>
+<div class="p-6 mt-auto">
+<div class="bg-white/5 rounded-xl p-4 border border-white/5">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[9px] font-bold text-white/30 uppercase tracking-widest">Storage used</span>
+<span class="text-[9px] font-bold text-white/60">65%</span>
+</div>
+<div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-indigo-400/60 w-[65%] rounded-full"></div>
+</div>
+<button class="w-full mt-4 flex items-center justify-center gap-2 py-2 text-[10px] font-bold text-white/50 hover:text-white transition-all">
+<span class="material-symbols-outlined text-[16px]" data-icon="cloud_upload">cloud_upload</span>
+                            Add Knowledge Source
+                        </button>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>
