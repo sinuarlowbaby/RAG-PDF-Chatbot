@@ -259,8 +259,8 @@
     <!-- Temperature -->
     <div class="setting-group">
       <span class="setting-label">🌡️ Temp</span>
-      <input type="range" id="tempSlider" min="0" max="1" step="0.05" value="0.7" oninput="updateTemp(this.value)"/>
-      <span class="temp-val" id="tempVal">0.70</span>
+      <input type="range" id="tempSlider" min="0" max="1" step="0.05" value="0.2" oninput="updateTemp(this.value)"/>
+      <span class="temp-val" id="tempVal">0.20</span>
     </div>
 
     <div class="divider"></div>
@@ -344,28 +344,39 @@
 
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
-let files    = ['research_paper.pdf', 'architecture.pdf'];
+let files    = [];
 let reranker = true;
 let showCtx  = true;
 let msgCount = 0;
+let currentSessionId = null;
 
-const MOCK_CHUNKS = [
-  { id:1, text:"RAG combines retrieval systems with generative models to produce grounded, accurate answers based on provided documents.", score:0.97, source:"intro.pdf" },
-  { id:2, text:"The vector store indexes document embeddings for fast semantic search. Top-k chunks are fetched and passed to the LLM as context.", score:0.91, source:"architecture.pdf" },
-  { id:3, text:"Reranking re-scores retrieved chunks using a cross-encoder, improving precision by prioritizing the most relevant passages before generation.", score:0.84, source:"reranking.pdf" },
-];
+// const MOCK_CHUNKS = [
+//   { id:1, text:"RAG combines retrieval systems with generative models to produce grounded, accurate answers based on provided documents.", score:0.97, source:"intro.pdf" },
+//   { id:2, text:"The vector store indexes document embeddings for fast semantic search. Top-k chunks are fetched and passed to the LLM as context.", score:0.91, source:"architecture.pdf" },
+//   { id:3, text:"Reranking re-scores retrieved chunks using a cross-encoder, improving precision by prioritizing the most relevant passages before generation.", score:0.84, source:"reranking.pdf" },
+// ];
 
-const MOCK_RESP = [
-  "Based on the retrieved context, RAG systems work by combining semantic retrieval with generative models to produce accurate, grounded answers. 🔍",
-  "The documents indicate that vector stores enable fast similarity search over embedded chunks, fed to the LM as context. 📚",
-  "According to the indexed content, reranking significantly improves answer quality by re-scoring passages using cross-encoder models. ⚡",
-  "The retrieved chunks suggest that temperature controls creativity — lower values produce more deterministic, factual responses. 🌡️",
-];
+// const MOCK_RESP = [
+//   "Based on the retrieved context, RAG systems work by combining semantic retrieval with generative models to produce accurate, grounded answers. 🔍",
+//   "The documents indicate that vector stores enable fast semantic search over embedded chunks, fed to the LM as context. 📚",
+//   "According to the indexed content, reranking significantly improves answer quality by re-scoring passages using cross-encoder models. ⚡",
+//   "The retrieved chunks suggest that temperature controls creativity — lower values produce more deterministic, factual responses. 🌡️",
+// ];
 
 // ── Init ───────────────────────────────────────────────────────────────────
 window.onload = () => {
+  const savedFiles = localStorage.getItem("rag_files");
+  const savedSession = localStorage.getItem("rag_session_id");
+  if (savedFiles) files = JSON.parse(savedFiles);
+  if (savedSession) currentSessionId = savedSession;
+  
   renderFiles();
-  appendMessage('bot', "Hello! Upload your documents and ask me anything. I'll retrieve relevant context to answer your questions accurately. 🤖");
+
+  if (currentSessionId && files.length > 0) {
+    appendMessage('bot', `Welcome back! I restored your session with your uploaded document(s). What would you like to ask? 🤖`);
+  } else {
+    appendMessage('bot', "Hello! Upload your documents and ask me anything. I'll retrieve relevant context to answer your questions accurately. 🤖");
+  }
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -380,17 +391,63 @@ function scoreColor(s) {
 }
 
 // ── Files ──────────────────────────────────────────────────────────────────
-function handleUpload(input) {
+async function handleUpload(input) {
+  if (!input.files.length) return;
+  
+  // 1. Show files in the UI immediately
   Array.from(input.files).forEach(f => {
     if (!files.includes(f.name)) files.push(f.name);
   });
-  input.value = '';
   renderFiles();
+
+  // 2. Prepare the files to send to FastAPI
+  const formData = new FormData();
+  Array.from(input.files).forEach(f => {
+    formData.append('files', f); // Must match the 'files' parameter in upload.py
+  });
+
+  try {
+    // 3. Send to your FastAPI upload route
+    const response = await fetch('/api/v1/upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail ? JSON.stringify(errData.detail) : `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    currentSessionId = data.session_id;
+    localStorage.setItem("rag_session_id", currentSessionId);
+    localStorage.setItem("rag_files", JSON.stringify(files));
+
+    console.log("Upload successful! Session ID:", currentSessionId);
+    // Optional: Let the user know it's ready
+    appendMessage('bot', `Successfully uploaded ${data.documents} document(s). What would you like to know?`);
+    
+  } catch (error) {
+    console.error("Upload failed:", error);
+    appendMessage('bot', `⚠️ Sorry, upload failed. Backend says: ${error.message}`);
+  }
+  
+  input.value = ''; // Reset the file input
 }
 
-function clearFiles() { files = []; renderFiles(); }
+function clearFiles() { 
+    files = []; 
+    currentSessionId = null; 
+    localStorage.removeItem("rag_files");
+    localStorage.removeItem("rag_session_id");
+    renderFiles(); 
+}
 
-function deleteFile(idx) { files.splice(idx, 1); renderFiles(); }
+function deleteFile(idx) { 
+    files.splice(idx, 1); 
+    localStorage.setItem("rag_files", JSON.stringify(files));
+    renderFiles(); 
+}
 
 function renderFiles() {
   const el = document.getElementById('fileList');
@@ -469,25 +526,111 @@ function removeTyping() {
   if (el) el.remove();
 }
 
-function sendMessage() {
+async function sendMessage() {
   const input = document.getElementById('chatInput');
   const text  = input.value.trim();
   if (!text) return;
 
+  // 1. Guard check: Require an active session
+  if (!currentSessionId) {
+    appendMessage('bot', "⚠️ Please upload a document first so I have something to search!");
+    return;
+  }
+
   appendMessage('user', text);
   input.value = '';
   showTyping();
-  clearChunks();
+  clearChunks(); // Clears the right panel while we wait
 
-  setTimeout(() => {
+    try {
+      // Grab temperature from UI slider
+      const currentTemp = parseFloat(document.getElementById('tempSlider').value);
+
+      // 2. Send request with x-session-id in the HEADERS (matching your FastAPI setup)
+      const response = await fetch('/api/v1/ask', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-session-id': currentSessionId // ✅ Passed as a header here
+        },
+        body: JSON.stringify({ question: text, temperature: currentTemp })
+      });
+
     removeTyping();
-    renderChunks(MOCK_CHUNKS);
-    const resp = MOCK_RESP[msgCount % MOCK_RESP.length];
-    msgCount++;
-    appendMessage('bot', resp);
-  }, 1400);
-}
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      appendMessage('bot', `⚠️ Error: ${errorData.detail}`);
+      return;
+    }
+
+    // 3. Create an empty bubble for the incoming stream
+    const msgs = document.getElementById('messages');
+    const row = document.createElement('div');
+    row.className = 'msg-row fadeUp';
+    row.innerHTML = `
+      <div class="avatar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
+      </div>
+      <div class="bubble-wrap">
+        <div class="bubble" id="streaming-bubble"></div>
+        <div class="msg-time">${now()}</div>
+      </div>`;
+    msgs.appendChild(row);
+    
+    const bubble = row.querySelector('#streaming-bubble');
+    bubble.removeAttribute('id');
+
+    // 4. Read the SSE Stream
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let done = false;
+    let buffer = "";
+
+    while (!done) {
+      const { value, done: readerDone } = await reader.read();
+      done = readerDone;
+      if (value) {
+        buffer += decoder.decode(value, { stream: true });
+
+        let bIndex;
+        while ((bIndex = buffer.indexOf('\n\n')) !== -1) {
+            const messageStr = buffer.slice(0, bIndex);
+            buffer = buffer.slice(bIndex + 2);
+            
+            const lines = messageStr.split('\n');
+            for (let line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataContent = line.replace('data: ', '');
+                    
+                    if (dataContent.trim() === '[DONE]') {
+                        done = true; // exit loop safely
+                        break;
+                    } else if (dataContent.includes('[ERROR]')) {
+                        bubble.innerHTML += `<br/><span style="color: red;">${dataContent}</span>`;
+                    } else if (dataContent.startsWith('[CONTEXT]: ')) {
+                        try {
+                            const chunksData = JSON.parse(dataContent.substring(11));
+                            renderChunks(chunksData);
+                        } catch (e) {
+                            console.error("Error parsing context JSON:", e);
+                        }
+                    } else {
+                        // Append the actual word to the bubble
+                        bubble.innerHTML += dataContent;
+                        msgs.scrollTop = msgs.scrollHeight; // Auto-scroll down
+                    }
+                }
+            }
+        }
+      }
+    }
+  } catch (err) {
+    removeTyping();
+    appendMessage('bot', "⚠️ Connection error. Is the server running?");
+    console.error(err);
+  }
+}
 // ── Chunks ─────────────────────────────────────────────────────────────────
 function clearChunks() {
   document.getElementById('chunks').innerHTML = `
@@ -501,27 +644,49 @@ function clearChunks() {
 
 function renderChunks(chunks) {
   const el = document.getElementById('chunks');
-  el.innerHTML = chunks.map(c => {
-    const col  = scoreColor(c.score);
-    const pct  = Math.round(c.score * 100);
-    return `
-      <div class="chunk-card">
-        <div class="chunk-top">
-          <div class="chunk-src">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-            ${c.source}
+  if (!chunks || chunks.length === 0) {
+      clearChunks();
+      return;
+  }
+  
+  // Helper to build a single chunk HTML card
+  const buildCard = (c) => {
+      const col  = scoreColor(c.score);
+      const pct  = (c.score * 100).toFixed(2);
+      return `
+        <div class="chunk-card">
+          <div class="chunk-top">
+            <div class="chunk-src">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              ${c.source}
+            </div>
           </div>
-          <span class="chunk-score" style="background:${col}22;color:${col}">${pct}%</span>
-        </div>
-        <p class="chunk-text">${c.text}</p>
-        <div class="score-bar-bg">
-          <div class="score-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${col},${col}88)"></div>
-        </div>
-      </div>`;
-  }).join('');
+          <div class="chunk-text" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">${c.text}</div>
+        </div>`;
+  };
+
+  // Render the absolutely most relevant chunk first
+  let html = buildCard(chunks[0]);
+
+  // If there are more chunks, hide them in a sleek details accordion
+  if (chunks.length > 1) {
+      const others = chunks.slice(1).map(buildCard).join('');
+      html += `
+        <details style="margin-top: 10px; cursor: pointer;">
+          <summary style="font-size: 11px; color: #8b5cf6; font-weight: 600; padding: 4px; outline: none; user-select: none;">
+            View remaining ${chunks.length - 1} retrieved chunks...
+          </summary>
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+            ${others}
+          </div>
+        </details>
+      `;
+  }
+
+  el.innerHTML = html;
 
   document.getElementById('ctxSub').textContent =
     `${reranker ? '✨ Reranker active' : 'Direct retrieval'} · ${chunks.length} chunks`;

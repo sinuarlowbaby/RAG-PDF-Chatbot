@@ -4,28 +4,34 @@ from retrieval.reranker import rerank_documents
 import tiktoken
 from retrieval.deduplication import deduplication
 from retrieval.build_context import build_context
-
-
+from qdrant_client.http import models
 
 def initialize_retrievers(vector_store,docs,session_id,k=20):
     # similarity search using mmr
-    vector_retriver = vector_store.as_retriever(
+    base_retriever = vector_store.as_retriever(
         search_kwargs={
             "k": k,
             "fetch_k": 4*k,
-            "filter": {"session_id": session_id}
+            "filter": models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="metadata.session_id",
+                        match=models.MatchValue(value=session_id),
+                    )
+                ]
+            )
         },
         search_type="mmr",
     )
-
     #Keyword search using BM25
     
     bm25_retriever = BM25Retriever.from_documents(docs)
     bm25_retriever.k = k
 
     hybrid_retriever = EnsembleRetriever(
-        retrievers=[vector_retriver, bm25_retriever],
+        retrievers=[base_retriever, bm25_retriever],
         weights=[0.6, 0.4],
+        verbose=True,
     )
     return hybrid_retriever
 

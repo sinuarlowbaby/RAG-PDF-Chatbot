@@ -1,5 +1,6 @@
 import os
 import dotenv
+import redis
 
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import QdrantClient
@@ -18,7 +19,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-app_state = {}
+
 
 
 @asynccontextmanager
@@ -27,11 +28,13 @@ async def lifespan(app: FastAPI):
     try:
         client = QdrantClient(url="http://localhost:6333")
 
-        app_state["client"] = client
-        app_state["embedding_model"] = OpenAIEmbeddings(
+        app.state.client = client
+        app.state.embedding_model = OpenAIEmbeddings(
             model="text-embedding-3-small",
             chunk_size=100
         )
+        app.state.redis = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+        app.state.sessions = {}
 
         logger.info("✅ Server is ready!")
     except Exception as e:
@@ -44,7 +47,7 @@ async def lifespan(app: FastAPI):
     yield  # App handles requests here
 
     logger.info("🛑 shutting down RAG pipeline...")
-    app_state["client"].close()
+    app.state.client.close()
     logger.info("✅ RAG pipeline shut down successfully")
 
 
@@ -75,3 +78,8 @@ async def root(request: Request):
 @app.get("/health", response_model=HealthResponse)
 async def health():
     return {"status": "ok", "pipeline_ready": True, "timestamp": datetime.now().isoformat()}
+
+
+import uvicorn
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, log_config=None, log_level="info")

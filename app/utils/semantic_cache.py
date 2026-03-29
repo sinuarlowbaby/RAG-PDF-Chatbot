@@ -28,27 +28,34 @@ def semantic_cache_match(user_query_embedding,treshold=0.8):
 
     try:
         keys = redis_client.scan_iter("semantic_cache:*")
+        best_match = None
+        highest_score = 0.0
+
         for key in keys:
             data = json.loads(redis_client.get(key))
             cached_embedding = data["embedding"]
             cached_context = data["context"]    # context created from pdf
-            cached_response = data["response"]  # llm generated response for the context
+            cached_chunks = data.get("chunk_data", [])
 
             similarity_score = cosine_similarity(
                 [cached_embedding],
                 [user_query_embedding]
                 )[0][0]
 
-            if similarity_score > treshold:
-                return cached_response
-            else:
-                print("⚡ Semantic cache miss")
-        return None
+            if similarity_score > highest_score:
+                highest_score = similarity_score
+                best_match = (cached_context, cached_chunks)
+
+        if highest_score > treshold and best_match is not None:
+            return best_match
+        else:
+            print("⚡ Semantic cache miss")
+            return None
     except redis.exceptions.RedisError:
         return None
 
 
-def store_semantic_cache(user_query,query_embedding,context,response):
+def store_semantic_cache(user_query,query_embedding,context,response=None):
     if not redis_available():
         return False
 
@@ -64,7 +71,7 @@ def store_semantic_cache(user_query,query_embedding,context,response):
             "user_query":user_query,
             "embedding":query_embedding,
             "context":context,
-            "response":response,
+            "chunk_data":response,  # We are overloading the 'response' arg to store chunk_data since the response wasn't being used
             "created_at":datetime.datetime.now().isoformat()
         }
 

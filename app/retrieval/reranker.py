@@ -12,7 +12,7 @@ def rerank_documents(user_query,unique_docs,top_n=5):
 
     scored_docs.sort(key=lambda x: x[1],reverse=True)
 
-    reranked_docs = [doc for doc,score in scored_docs[:top_n]]
+    reranked_docs = [(doc,score) for doc,score in scored_docs[:top_n]]
 
     return reranked_docs
     

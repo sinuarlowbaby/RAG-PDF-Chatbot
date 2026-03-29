@@ -6,7 +6,7 @@ dotenv.load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def llm_client(retrived_context,user_query):
+def llm_client(retrived_context,user_query,temperature=0.2):
     SYSTEM_PROMPT = f"""
     You are a helpful assistant.
     Use the following context to answer the user's query.
@@ -26,7 +26,8 @@ def llm_client(retrived_context,user_query):
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_query},
         ],
-        stream =True
+        temperature=temperature,
+        stream=True
     )
     full_response=''
     for chunk in response_generator:

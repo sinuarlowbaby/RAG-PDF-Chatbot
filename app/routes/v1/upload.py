@@ -1,7 +1,7 @@
 from fastapi import APIRouter,UploadFile,File,Request
 import uuid
 from pipeline.ingest_pipeline import ingest_pipeline
-from app import app_state
+
 import os
 from retrieval.hybrid_document_retrieval import initialize_retrievers
 import logging
@@ -24,15 +24,22 @@ def save_files(files)-> list[str]:
 @upload_router.post("/upload")
 async def upload(req: Request, files: list[UploadFile] = File(...)):
     session_id = str(uuid.uuid4())
-    client = app_state["client"]
-    embedding_model = app_state["embedding_model"]
+    client = req.app.state.client
+    embedding_model = req.app.state.embedding_model
     saved_files = save_files(files)
-    vector_store = await ingest_pipeline(client,embedding_model,saved_files,session_id)
-    req.app.state.setex(f"vector_store_{session_id}",60*60*5, "active")
-    if vector_store:
-        app_state["session_id"] = session_id
-    app_state["vector_store"] = vector_store
-    app_state["documents"] = saved_files
-    app_state["hybrid_retriever"] = initialize_retrievers(vector_store,client,session_id)
+    vector_store,doc_chunks = ingest_pipeline(client,embedding_model,saved_files,session_id)
+
+    req.app.state.redis.setex(f"session:{session_id}", 1800, "active")
+    logger.info(f"Session {session_id} registered to redis")
+    
+    if not hasattr(req.app.state, "sessions"):
+        logger.info("No session map found, creating one")
+        req.app.state.sessions = {}
+
+    # req.app.state.sessions[session_id] = {
+    #     "vector_store": vector_store,
+    #     "documents": doc_chunks,
+    #     "hybrid_retriever": initialize_retrievers(vector_store,doc_chunks,session_id)
+    # }
 
     return {"session_id":session_id,"message":"Upload successful","documents":len(saved_files)}

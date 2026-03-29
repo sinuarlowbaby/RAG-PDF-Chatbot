@@ -11,12 +11,8 @@ def load_documents(files):
     for file_path in files:
         if not file_path.endswith(".pdf"):
             continue
-        loader = DirectoryLoader(
-                file_path,
-                glob="*.pdf",
-                loader_cls=PyPDFLoader,
-                use_multithreading=True
-            )
+        # Use PyPDFLoader directly for individual files
+        loader = PyPDFLoader(file_path)
         documents.extend(loader.load())
     return documents
 

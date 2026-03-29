@@ -15,16 +15,16 @@ def ingest_pipeline(client,embedding_model,saved_files,session_id):
 
 
     #Splitting documents
-    documents = doc_chunker(raw_documents,session_id)
+    doc_chunks = doc_chunker(raw_documents,session_id)
     t2 = time_calculate()
     print(f"time taken to split documents: {t2 - t1:.2f}s")
 
     #Ingesting documents to vector store
-    vector_store = vector_db(documents, embedding_model,client,session_id)
+    vector_store = vector_db(doc_chunks, embedding_model,client,session_id)
     t3 = time_calculate()
     print(f"time taken to ingest documents to vector store: {t3 - t2:.2f}")
     print("✅Ingestion pipeline done")
     
-    return vector_store
+    return vector_store,doc_chunks
 
     

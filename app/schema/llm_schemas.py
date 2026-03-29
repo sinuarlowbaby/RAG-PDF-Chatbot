@@ -8,6 +8,12 @@ class QueryRequest(BaseModel):
         description="The question to ask",
         examples=["What is python?"]
     )
+    temperature: float = Field(
+        0.7,
+        ge=0.0,
+        le=1.0,
+        description="LLM temperature"
+    )
 
 class HealthResponse(BaseModel):
     status: str
