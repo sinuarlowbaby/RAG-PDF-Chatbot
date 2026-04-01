@@ -9,7 +9,7 @@ from retrieval.build_context import build_context
 from utils.semantic_cache import semantic_cache_match,store_semantic_cache,redis_available
 
 
-def query_pipeline(vector_store,user_query,hybrid_retriever,session_id,embedding_model,k=20,temperature=0.7):
+def query_pipeline(vector_store,user_query,hybrid_retriever,session_id,embedding_model,reranker_model,k=20,temperature=0.7):
     t1 = time_calculate()
 
     queries = generate_queries(user_query, n_queries=4)
@@ -31,7 +31,7 @@ def query_pipeline(vector_store,user_query,hybrid_retriever,session_id,embedding
 
     all_docs = retrieve_hybrid_documents(hybrid_retriever, queries,user_query)
     unique_docs = deduplication(all_docs, k=20)
-    reranked_docs = rerank_documents(user_query,unique_docs)
+    reranked_docs = rerank_documents(user_query,unique_docs,reranker=reranker_model)
     retrived_context = build_context(reranked_docs)
 
     t2 = time_calculate()
