@@ -1,0 +1,12 @@
+to run the app:
+1. make sure you have all the dependencies installed
+2. run the app using uvicorn app.app:app --reload
+3. open the app in browser at http://localhost:8000
+4. upload the document and ask the question
+
+to run app logs seperate from main terminal:
+1. Open a new terminal tab or window.
+2. Navigate to your project's app folder: cd d:\PROJECT\Python\RAG-PDF-Chatbot\app
+3. Run the "tailing" command depending on your terminal:
+    If you're using PowerShell: Get-Content "app.log -Wait"
+    If you're using Git Bash, WSL, or Command Prompt with standard Unix tools: tail -f app.log

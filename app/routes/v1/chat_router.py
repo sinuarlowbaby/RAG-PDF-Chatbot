@@ -24,6 +24,7 @@ async def ask(request: Request, query:QueryRequest, x_session_id: str = Header(.
     logger.info(f"Received question: {query.question[:50]}")
     embedding_model = request.app.state.embedding_model
     client = request.app.state.client
+    reranker_model = request.app.state.reranker
     # doc_chunks = request.app.state.sessions[x_session_id]["documents"]
 
     vector_store = QdrantVectorStore(
@@ -64,6 +65,7 @@ async def ask(request: Request, query:QueryRequest, x_session_id: str = Header(.
                 hybrid_retriever,
                 x_session_id,
                 embedding_model,
+                reranker_model,
                 k=20,
                 temperature=query.temperature
             )

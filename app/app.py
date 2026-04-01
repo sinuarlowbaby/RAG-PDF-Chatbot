@@ -12,11 +12,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from fastapi.templating import Jinja2Templates
 from schema.llm_schemas import HealthResponse
+from sentence_transformers import CrossEncoder
 
 dotenv.load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("app.log", encoding="utf-8")
+    ]
+)
 logger = logging.getLogger(__name__)
 
 
@@ -27,6 +34,8 @@ async def lifespan(app: FastAPI):
     logger.info("Starting RAG pipeline...")
     try:
         client = QdrantClient(url="http://localhost:6333")
+        reranker= CrossEncoder('BAAI/bge-reranker-base')
+        app.state.reranker = reranker
 
         app.state.client = client
         app.state.embedding_model = OpenAIEmbeddings(

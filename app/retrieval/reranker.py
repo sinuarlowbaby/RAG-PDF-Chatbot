@@ -1,8 +1,7 @@
 from sentence_transformers import CrossEncoder
 
-reranker= CrossEncoder('BAAI/bge-reranker-base')
 
-def rerank_documents(user_query,unique_docs,top_n=5):
+def rerank_documents(user_query,unique_docs,reranker,top_n=5):
 
     pairs = [(user_query, doc.page_content) for doc in unique_docs]
 
