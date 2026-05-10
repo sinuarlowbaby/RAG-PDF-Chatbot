@@ -60,15 +60,7 @@ async def lifespan(app: FastAPI):
     logger.info("✅ RAG pipeline shut down successfully")
 
 
-app = FastAPI(title="RAG PDF Chatbot", description="RAG PDF Chatbot", version="1.0.0", lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 jinja2_env = Jinja2Templates(directory="templates")
 

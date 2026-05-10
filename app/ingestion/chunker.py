@@ -1,4 +1,5 @@
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
+from langchain_huggingface import HuggingFaceEmbeddings
 import re
 import uuid
 from pathlib import Path
@@ -9,13 +10,12 @@ def clean_text(text):
     text = re.sub(r". . . . . . . . ", "", text)
     return text.strip()
 
-def doc_chunker(raw_documents,session_id):
-    text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000,
-    chunk_overlap=200,
-    length_function=len,
-    is_separator_regex=False,
-    separators=["\n\n", "\n", ".", " "]
+def doc_chunker(raw_documents, session_id):
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    text_splitter = SemanticChunker(
+        embeddings,
+        breakpoint_threshold_type="percentile",
+        breakpoint_threshold_amount=85,
     )
 
     chunks = text_splitter.split_documents(raw_documents)
