@@ -13,9 +13,9 @@ from langsmith import traceable
 def query_pipeline(vector_store,user_query,hybrid_retriever,session_id,embedding_model,reranker_model,k=20,temperature=0.7):
     t1 = time_calculate()
 
-    queries = generate_queries(user_query, n_queries=4)
-    all_query = ' '.join(queries)   
-    user_query_embeddings = embedding_model.embed_query(all_query)
+    new_query = generate_queries(user_query, n_queries=1)
+    # all_query = ' '.join(new_query)   
+    user_query_embeddings = embedding_model.embed_query(new_query)
     
     cached_match = semantic_cache_match(user_query_embeddings)
 
@@ -25,14 +25,14 @@ def query_pipeline(vector_store,user_query,hybrid_retriever,session_id,embedding
         import json
         yield f"[CONTEXT]: {json.dumps(cached_chunks)}"
         
-        for chunk in llm_client(cached_context, user_query, temperature=temperature):
+        for chunk in llm_client(cached_context, new_query, temperature=temperature):
             yield chunk
         return
 
 
-    all_docs = retrieve_hybrid_documents(hybrid_retriever, queries,user_query)
-    unique_docs = deduplication(all_docs, k=20)
-    reranked_docs = rerank_documents(user_query,unique_docs,reranker=reranker_model)
+    all_docs = retrieve_hybrid_documents(hybrid_retriever, new_query)
+    unique_docs = deduplication(all_docs,k=10)
+    reranked_docs = rerank_documents(new_query,unique_docs,reranker=reranker_model)
     retrived_context = build_context(reranked_docs)
 
     t2 = time_calculate()
@@ -60,7 +60,7 @@ def query_pipeline(vector_store,user_query,hybrid_retriever,session_id,embedding
 
     #storing semantic cache
     if redis_available():
-        save_cache = store_semantic_cache(user_query,user_query_embeddings,retrived_context,chunk_data)
+        save_cache = store_semantic_cache(user_query,new_query,user_query_embeddings,retrived_context,chunk_data)
 
         if save_cache:
             print("⚡ Semantic cache stored for 1 hour")

@@ -5,10 +5,10 @@ encoding = tiktoken.get_encoding("o200k_base")
 from langsmith import traceable
 
 @traceable(run_type="tool", name="Build_Context")
-def build_context(unique_docs,token_limit=5000):
+def build_context(reranked_docs,token_limit=5000):
     context = ""
     token_count = 0
-    for i, (doc, score) in enumerate(unique_docs):
+    for i, (doc, score) in enumerate(reranked_docs):
         chunk = f"Document:{i+1} | Source: {doc.metadata.get('file_name','unknown')}\n{doc.page_content}\n\n"
         token_length = len(encoding.encode(chunk))
         

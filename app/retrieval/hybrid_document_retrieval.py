@@ -11,7 +11,7 @@ def initialize_retrievers(vector_store,docs,session_id,k=20):
     base_retriever = vector_store.as_retriever(
         search_kwargs={
             "k": k,
-            "fetch_k": 4*k,
+            "fetch_k": 2*k,
             "filter": models.Filter(
                 must=[
                     models.FieldCondition(
@@ -40,20 +40,20 @@ def initialize_retrievers(vector_store,docs,session_id,k=20):
 
 from langsmith import traceable
 
-@traceable(run_type="retriever", name="Execute_Hybrid_Retrieval")
-def retrieve_hybrid_documents(hybrid_retriever, queries,user_query,k=20):
+@traceable(name="Execute_Hybrid_Retrieval")
+def retrieve_hybrid_documents(hybrid_retriever, new_user_query,k=10):
 
     print("➡️retriving documents...\n")
 
     #hybrid search
-    all_docs = []
-    for query in queries:
-        docs = hybrid_retriever.invoke(query)
-        all_docs.extend(docs)
-
+    # all_docs = []
+    # for query in queries:
+    #     docs = hybrid_retriever.invoke(query)
+    #     all_docs.extend(docs)
+    docs = hybrid_retriever.invoke(new_user_query)
     #removes duplicate documents
     
 
-    return all_docs
+    return docs
 
 

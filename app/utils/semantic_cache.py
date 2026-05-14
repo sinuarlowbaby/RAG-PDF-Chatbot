@@ -4,6 +4,8 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import uuid
 import datetime
+from langsmith import traceable
+
 
 
 redis_client = redis.Redis(
@@ -22,6 +24,7 @@ def redis_available():
     except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError, redis.exceptions.RedisError):
         return False
 
+@traceable(run_type="cache", name="Semantic_Cache_Match")
 def semantic_cache_match(user_query_embedding,treshold=0.8):
     if not redis_available():
         return None
@@ -55,7 +58,7 @@ def semantic_cache_match(user_query_embedding,treshold=0.8):
         return None
 
 
-def store_semantic_cache(user_query,query_embedding,context,response=None):
+def store_semantic_cache(user_query,new_query,query_embedding,context,response=None):
     if not redis_available():
         return False
 
@@ -69,6 +72,7 @@ def store_semantic_cache(user_query,query_embedding,context,response=None):
 
         data={
             "user_query":user_query,
+            "new_query":new_query,
             "embedding":query_embedding,
             "context":context,
             "chunk_data":response,  # We are overloading the 'response' arg to store chunk_data since the response wasn't being used
