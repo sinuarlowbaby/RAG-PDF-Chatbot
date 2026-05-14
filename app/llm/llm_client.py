@@ -1,11 +1,14 @@
 from openai import OpenAI
 import dotenv
 import os
+from langsmith.wrappers import wrap_openai
+from langsmith import traceable
 
 dotenv.load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = wrap_openai(OpenAI(api_key=os.getenv("OPENAI_API_KEY")))
 
 
+@traceable(run_type="llm",name="LLM_Client", metadata={"model":"gpt-4o"})
 def llm_client(retrived_context,user_query,temperature=0.2):
     SYSTEM_PROMPT = f"""
     You are a helpful assistant.

@@ -2,6 +2,9 @@ import tiktoken
 
 encoding = tiktoken.get_encoding("o200k_base")
 
+from langsmith import traceable
+
+@traceable(run_type="tool", name="Build_Context")
 def build_context(unique_docs,token_limit=5000):
     context = ""
     token_count = 0

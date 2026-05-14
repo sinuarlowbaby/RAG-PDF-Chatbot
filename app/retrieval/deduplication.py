@@ -1,6 +1,9 @@
 import re
 
 
+from langsmith import traceable
+
+@traceable(run_type="tool", name="Deduplicate_Documents")
 def deduplication(docs , k=20):
     unique_result = []
     seen = set()

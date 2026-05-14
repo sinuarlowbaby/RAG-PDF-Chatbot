@@ -3,6 +3,9 @@ from langchain_community.document_loaders import DirectoryLoader,PyPDFLoader
 
     
 
+from langsmith import traceable
+
+@traceable(run_type="tool", name="Load_Documents")
 def load_documents(files):
     base_path = os.path.dirname(__file__)
     project_root = os.path.join(base_path, "../")

@@ -19,6 +19,9 @@ def clean_text(text):
     return text.strip()
 
 
+from langsmith import traceable
+
+@traceable(run_type="tool", name="Doc_Chunker")
 def doc_chunker(raw_documents, session_id):
     # embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
@@ -31,6 +34,7 @@ def doc_chunker(raw_documents, session_id):
         encoding_name="o200k_base",
         chunk_size=800,
         chunk_overlap=150,
+        separators=["\n\n", "\n", " ", ""],
     )   
 
     chunks = text_splitter.split_documents(raw_documents)

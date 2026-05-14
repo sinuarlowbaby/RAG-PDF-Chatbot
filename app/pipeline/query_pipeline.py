@@ -7,8 +7,9 @@ import openai
 from retrieval.reranker import rerank_documents
 from retrieval.build_context import build_context
 from utils.semantic_cache import semantic_cache_match,store_semantic_cache,redis_available
+from langsmith import traceable
 
-
+@traceable(run_type="chain", name="RAG_Query_Pipeline")
 def query_pipeline(vector_store,user_query,hybrid_retriever,session_id,embedding_model,reranker_model,k=20,temperature=0.7):
     t1 = time_calculate()
 
