@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ Error initializing Server: {e}")
         raise e
 
-    print("🚀 FastAPI server is ready!")
+    print("FastAPI server is ready!")
     print("📖 Swagger UI  →  http://localhost:8000/docs")
     print("📖 Home Page   →  http://localhost:8000")
 

@@ -28,14 +28,6 @@ def generate_queries(user_query,n_queries=4):
         - Avoid repeating phrases
         - Keep queries concise but meaningful
         - Avoid overly generic queries
-
-        Output Rules:
-        - Return ONLY a valid JSON array
-        - No explanation, no text outside JSON
-        - Ensure output is parseable
-
-        Example:
-        ["...", "...", "...", "..."]
         """
 
     response = client.chat.completions.create(
@@ -46,10 +38,5 @@ def generate_queries(user_query,n_queries=4):
             ],
         temperature=0.3
     )
-    try:
-        queries=json.loads(response.choices[0].message.content)
-    except:
-        queries=[user_query]
-        
-    return queries
+    return response.choices[0].message.content.strip()
 

@@ -27,6 +27,7 @@ async def upload(req: Request, files: list[UploadFile] = File(...)):
     client = req.app.state.client
     embedding_model = req.app.state.embedding_model
     saved_files = save_files(files)
+    
     vector_store,doc_chunks = ingest_pipeline(client,embedding_model,saved_files,session_id)
 
     req.app.state.redis.setex(f"session:{session_id}", 1800, "active")
