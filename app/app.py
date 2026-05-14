@@ -17,11 +17,16 @@ from sentence_transformers import CrossEncoder
 dotenv.load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# Moving app creation below lifespan definition
+
+
+
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("app.log", encoding="utf-8")
+        logging.FileHandler("app.log", encoding="utf-8"),
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
@@ -33,11 +38,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Starting RAG pipeline...")
     try:
-        client = QdrantClient(url="http://localhost:6333")
-        reranker= CrossEncoder('BAAI/bge-reranker-base')
-        app.state.reranker = reranker
+        app.state.client = QdrantClient(url="http://localhost:6333")
+        app.state.reranker = CrossEncoder('BAAI/bge-reranker-base')
 
-        app.state.client = client
         app.state.embedding_model = OpenAIEmbeddings(
             model="text-embedding-3-small",
             chunk_size=100
@@ -52,6 +55,8 @@ async def lifespan(app: FastAPI):
 
     print("🚀 FastAPI server is ready!")
     print("📖 Swagger UI  →  http://localhost:8000/docs")
+    print("📖 Home Page   →  http://localhost:8000")
+
 
     yield  # App handles requests here
 
@@ -60,9 +65,21 @@ async def lifespan(app: FastAPI):
     logger.info("✅ RAG pipeline shut down successfully")
 
 
+app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-jinja2_env = Jinja2Templates(directory="templates")
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+jinja2_env = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 from routes.v1.chat_router import chat_router
 from routes.v1.upload import upload_router
@@ -73,7 +90,7 @@ app.include_router(upload_router)
 
 @app.get("/")
 async def root(request: Request):
-    return jinja2_env.TemplateResponse("rag_chatbot.html", {"request": request})
+    return jinja2_env.TemplateResponse(request=request, name="rag_chatbot.html")
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -82,5 +99,8 @@ async def health():
 
 
 import uvicorn
+import os
 if __name__ == "__main__":
+    # Change to the app directory so imports like 'schema' work in uvicorn's reload process
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, log_config=None, log_level="info")
