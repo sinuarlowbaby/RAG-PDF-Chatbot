@@ -5,6 +5,9 @@ import uuid
 
 COLLECTION_NAME = "global_rag_store"
 
+from langsmith import traceable
+
+@traceable(run_type="tool", name="Ingest_to_Vector_DB")
 def vector_db(docs, embedding_model,client,session_id):
 
     collections = client.get_collections().collections

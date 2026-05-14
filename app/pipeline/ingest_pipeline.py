@@ -5,8 +5,9 @@ from vector_store.vector_store import vector_db
 from qdrant_client import QdrantClient
 from langchain_openai import OpenAIEmbeddings
 import os
+from langsmith import traceable
 
-
+@traceable(run_type="chain", name="RAG_Ingest_Pipeline")
 def ingest_pipeline(client,embedding_model,saved_files,session_id):
     #Loading documents
     raw_documents = load_documents(saved_files)

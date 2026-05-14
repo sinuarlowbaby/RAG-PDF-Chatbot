@@ -38,6 +38,9 @@ def initialize_retrievers(vector_store,docs,session_id,k=20):
 
 
 
+from langsmith import traceable
+
+@traceable(run_type="retriever", name="Execute_Hybrid_Retrieval")
 def retrieve_hybrid_documents(hybrid_retriever, queries,user_query,k=20):
 
     print("➡️retriving documents...\n")

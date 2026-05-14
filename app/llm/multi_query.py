@@ -1,12 +1,15 @@
 from openai import OpenAI
 import dotenv
 import os,json
+from langsmith.wrappers import wrap_openai
+from langsmith import traceable
 
 dotenv.load_dotenv()
 
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = wrap_openai(OpenAI(api_key=os.getenv("OPENAI_API_KEY")))
 
+@traceable(run_type="llm", name="Generate_Multiple_Queries")
 def generate_queries(user_query,n_queries=4):
     SYSTEM_PROMPT = f"""
         You are an expert query expansion engine for a semantic vector search system.
