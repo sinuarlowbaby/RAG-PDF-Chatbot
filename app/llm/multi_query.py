@@ -10,25 +10,51 @@ dotenv.load_dotenv()
 client = wrap_openai(OpenAI(api_key=os.getenv("OPENAI_API_KEY")))
 
 @traceable(run_type="llm", name="Generate_Multiple_Queries")
-def generate_queries(user_query,n_queries=4):
+def generate_queries(user_query):
+    query_len = len(user_query.split())
+    if query_len < 5:
+        n_queries=2
+    else:
+        n_queries=4
+
     SYSTEM_PROMPT = f"""
-        You are an expert query expansion engine for a semantic vector search system.
+      You are a retrieval query optimization engine.
 
-        Your task is to generate {n_queries} high-quality search queries that maximize document retrieval recall.
+      Generate {n_queries} semantically distinct search queries for a hybrid RAG retrieval system.
 
-        Guidelines:
-        - Each query must represent a DIFFERENT retrieval strategy:
-            1. Keyword-focused query (short, dense terms)
-            2. Natural language question
-            3. Semantic paraphrase
-            4. Expanded context query (add related concepts)
+      Goals:
+      - maximize retrieval recall
+      - preserve original intent
+      - improve semantic coverage
+      - avoid semantic drift
+      - avoid redundant wording
 
-        - Preserve the original intent exactly
-        - Use different vocabulary and structure
-        - Avoid repeating phrases
-        - Keep queries concise but meaningful
-        - Avoid overly generic queries
-        """
+      Rules:
+      - keep queries concise
+      - each query should target a different retrieval angle
+      - preserve technical terms
+      - do NOT explain anything
+      - do NOT number the output
+      - return ONLY a valid JSON array of strings
+
+      Good query types:
+      - keyword-focused
+      - semantic paraphrase
+      - natural language variation
+      - context-expanded variation (ONLY if useful)
+
+      Bad behavior:
+      - overly broad queries
+      - unrelated concepts
+      - generic filler text
+      - conversational explanations
+
+      Example output:
+      [
+        "python programming language",
+        "what is python used for"
+      ]
+    """
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -38,5 +64,9 @@ def generate_queries(user_query,n_queries=4):
             ],
         temperature=0.3
     )
-    return response.choices[0].message.content.strip()
+    queries = json.loads(response.choices[0].message.content.strip())
+    return queries
+
+    # output = response.choices[0].message.content.strip()
+    # return output
 

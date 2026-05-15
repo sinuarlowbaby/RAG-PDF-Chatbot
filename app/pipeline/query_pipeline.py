@@ -13,21 +13,21 @@ from langsmith import traceable
 def query_pipeline(vector_store,user_query,hybrid_retriever,session_id,embedding_model,reranker_model,k=20,temperature=0.7):
     t1 = time_calculate()
 
-    new_query = generate_queries(user_query, n_queries=1)
+    new_query = generate_queries(user_query)
     # all_query = ' '.join(new_query)   
     user_query_embeddings = embedding_model.embed_query(new_query)
     
-    cached_match = semantic_cache_match(user_query_embeddings)
+    # cached_match = semantic_cache_match(user_query_embeddings)
 
-    if cached_match:
-        cached_context, cached_chunks = cached_match
-        print("⚡ Semantic cache hit")
-        import json
-        yield f"[CONTEXT]: {json.dumps(cached_chunks)}"
+    # if cached_match:
+    #     cached_context, cached_chunks = cached_match
+    #     print("⚡ Semantic cache hit")
+    #     import json
+    #     yield f"[CONTEXT]: {json.dumps(cached_chunks)}"
         
-        for chunk in llm_client(cached_context, new_query, temperature=temperature):
-            yield chunk
-        return
+    #     for chunk in llm_client(cached_context, new_query, temperature=temperature):
+    #         yield chunk
+    #     return
 
 
     all_docs = retrieve_hybrid_documents(hybrid_retriever, new_query)
