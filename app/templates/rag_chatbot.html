@@ -233,6 +233,18 @@
     to   { opacity: 1; transform: translateY(0); }
   }
   .fadeUp { animation: fadeUp .35s ease; }
+
+  /* File loading spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 12px; height: 12px; flex-shrink: 0;
+    border: 2px solid rgba(99,102,241,.25);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  .file-item.loading { opacity: 0.65; }
+  .file-status { font-size: 10px; color: #8b5cf6; margin-left: 2px; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -344,10 +356,11 @@
 
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
-let files    = [];
-let reranker = true;
-let showCtx  = true;
-let msgCount = 0;
+let files          = [];
+let loadingFiles   = new Set(); // tracks filenames currently being uploaded
+let reranker       = true;
+let showCtx        = true;
+let msgCount       = 0;
 let currentSessionId = null;
 
 // const MOCK_CHUNKS = [
@@ -393,29 +406,29 @@ function scoreColor(s) {
 // ── Files ──────────────────────────────────────────────────────────────────
 async function handleUpload(input) {
   if (!input.files.length) return;
-  
-  // 1. Show files in the UI immediately
-  Array.from(input.files).forEach(f => {
-    if (!files.includes(f.name)) files.push(f.name);
+
+  const newFileNames = Array.from(input.files).map(f => f.name);
+
+  // 1. Add files and mark them as loading immediately
+  newFileNames.forEach(name => {
+    if (!files.includes(name)) files.push(name);
+    loadingFiles.add(name);
   });
   renderFiles();
 
-  // 2. Prepare the files to send to FastAPI
+  // 2. Prepare FormData
   const formData = new FormData();
-  Array.from(input.files).forEach(f => {
-    formData.append('files', f); // Must match the 'files' parameter in upload.py
-  });
+  Array.from(input.files).forEach(f => formData.append('files', f));
 
   try {
-    // 3. Send to your FastAPI upload route
     const response = await fetch('/api/v1/upload', {
       method: 'POST',
       body: formData
     });
-    
+
     if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail ? JSON.stringify(errData.detail) : `HTTP ${response.status}`);
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.detail ? JSON.stringify(errData.detail) : `HTTP ${response.status}`);
     }
 
     const data = await response.json();
@@ -423,16 +436,22 @@ async function handleUpload(input) {
     localStorage.setItem("rag_session_id", currentSessionId);
     localStorage.setItem("rag_files", JSON.stringify(files));
 
-    console.log("Upload successful! Session ID:", currentSessionId);
-    // Optional: Let the user know it's ready
     appendMessage('bot', `Successfully uploaded ${data.documents} document(s). What would you like to know?`);
-    
+
   } catch (error) {
     console.error("Upload failed:", error);
+    // Remove failed files from the list
+    newFileNames.forEach(name => {
+      const idx = files.indexOf(name);
+      if (idx !== -1) files.splice(idx, 1);
+    });
     appendMessage('bot', `⚠️ Sorry, upload failed. Backend says: ${error.message}`);
+  } finally {
+    // Always clear loading state regardless of success or failure
+    newFileNames.forEach(name => loadingFiles.delete(name));
+    renderFiles();
+    input.value = '';
   }
-  
-  input.value = ''; // Reset the file input
 }
 
 function clearFiles() { 
@@ -455,20 +474,27 @@ function renderFiles() {
     el.innerHTML = '<div class="no-files">No documents yet</div>';
     return;
   }
-  el.innerHTML = files.map((f, i) => `
-    <div class="file-item">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14,2 14,8 20,8"/>
-      </svg>
+  el.innerHTML = files.map((f, i) => {
+    const isLoading = loadingFiles.has(f);
+    return `
+    <div class="file-item${isLoading ? ' loading' : ''}">
+      ${isLoading
+        ? `<div class="spinner"></div><span class="file-status">Processing…</span>`
+        : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+           </svg>`
+      }
       <span class="file-name" title="${f}">${f}</span>
+      ${!isLoading ? `
       <button class="file-del" onclick="deleteFile(${i})">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/>
           <path d="M10,11v6"/><path d="M14,11v6"/>
         </svg>
-      </button>
-    </div>`).join('');
+      </button>` : ''}
+    </div>`;
+  }).join('');
 }
 
 // ── Chat ───────────────────────────────────────────────────────────────────
@@ -560,7 +586,13 @@ async function sendMessage() {
 
     if (!response.ok) {
       const errorData = await response.json();
-      appendMessage('bot', `⚠️ Error: ${errorData.detail}`);
+      if (response.status === 404) {
+        // Session expired on backend — clear stale file list & session from UI
+        clearFiles();
+        appendMessage('bot', `⚠️ ${errorData.detail} Your document list has been cleared.`);
+      } else {
+        appendMessage('bot', `⚠️ Error: ${errorData.detail}`);
+      }
       return;
     }
 

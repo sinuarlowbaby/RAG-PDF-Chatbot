@@ -25,13 +25,7 @@ async def ask(request: Request, query:QueryRequest, x_session_id: str = Header(.
     embedding_model = request.app.state.embedding_model
     client = request.app.state.client
     reranker_model = request.app.state.reranker
-    # doc_chunks = request.app.state.sessions[x_session_id]["documents"]
-
-    vector_store = QdrantVectorStore(
-        client=client,
-        embedding=embedding_model,
-        collection_name="global_rag_store"
-    )
+    vector_store = request.app.state.vector_store  # ✅ reused from startup, no extra API call
     scroll_result = client.scroll(
         collection_name="global_rag_store",
         scroll_filter=models.Filter(

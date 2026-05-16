@@ -24,7 +24,7 @@ def redis_available():
     except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError, redis.exceptions.RedisError):
         return False
 
-@traceable(run_type="cache", name="Semantic_Cache_Match")
+@traceable(run_type="retriever", name="Semantic_Cache_Match")
 def semantic_cache_match(user_query_embedding,treshold=0.8):
     if not redis_available():
         return None
