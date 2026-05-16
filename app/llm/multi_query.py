@@ -1,16 +1,16 @@
-from openai import OpenAI
 import dotenv
-import os,json
-from langsmith.wrappers import wrap_openai
+import os, json
 from langsmith import traceable
+from groq import Groq
 
 dotenv.load_dotenv()
 
 
-client = wrap_openai(OpenAI(api_key=os.getenv("OPENAI_API_KEY")))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-@traceable(run_type="llm", name="Generate_Multiple_Queries")
+@traceable(run_type="llm", name="Generate_Multiple_Queries",metadata={"model": "llama-3.3-70b-versatile"})
 def generate_queries(user_query):
+    
     query_len = len(user_query.split())
     if query_len < 5:
         n_queries=2
@@ -57,14 +57,17 @@ def generate_queries(user_query):
     """
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="llama-3.3-70b-versatile",
         messages=[
             {"role":"system", "content":SYSTEM_PROMPT},
             {"role":"user", "content":user_query}
             ],
         temperature=0.3
     )
-    queries = json.loads(response.choices[0].message.content.strip())
+    try:
+        queries = json.loads(response.choices[0].message.content.strip())
+    except json.JSONDecodeError:
+        queries = [user_query]  # fallback to original query
     return queries
 
     # output = response.choices[0].message.content.strip()
