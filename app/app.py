@@ -4,6 +4,7 @@ import redis
 
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import QdrantClient
+from langchain_qdrant import QdrantVectorStore
 import openai
 import logging
 from fastapi import FastAPI, Request
@@ -39,11 +40,17 @@ async def lifespan(app: FastAPI):
     logger.info("Starting RAG pipeline...")
     try:
         app.state.client = QdrantClient(url="http://localhost:6333")
-        app.state.reranker = CrossEncoder('BAAI/bge-reranker-base')
+        app.state.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
         app.state.embedding_model = OpenAIEmbeddings(
             model="text-embedding-3-small",
             chunk_size=100
+        )
+        # ✅ Initialize once at startup — not per-request
+        app.state.vector_store = QdrantVectorStore(
+            client=app.state.client,
+            embedding=app.state.embedding_model,
+            collection_name="global_rag_store",
         )
         app.state.redis = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
         app.state.sessions = {}

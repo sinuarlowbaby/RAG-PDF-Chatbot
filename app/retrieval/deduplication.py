@@ -4,7 +4,7 @@ import re
 from langsmith import traceable
 
 @traceable(run_type="tool", name="Deduplicate_Documents")
-def deduplication(docs , k=10):
+def deduplication(docs , k=20):
     unique_result = []
     seen = set()
     for doc in docs:
@@ -16,7 +16,7 @@ def deduplication(docs , k=10):
 
             unique_result.append(doc)
             seen.add(key)
-        # if len(unique_result) >= k:
-        #     break
+        if len(unique_result) >= k:
+            break
     return unique_result
 

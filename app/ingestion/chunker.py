@@ -31,9 +31,9 @@ def doc_chunker(raw_documents, session_id):
     #     breakpoint_threshold_amount=85,
     # )
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-        encoding_name="o200k_base",
-        chunk_size=800,
-        chunk_overlap=150,
+        encoding_name="cl100k_base",
+        chunk_size=450,
+        chunk_overlap=100,
         separators=["\n\n", "\n", " ", ""],
     )   
 

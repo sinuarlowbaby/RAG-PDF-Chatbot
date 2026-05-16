@@ -8,7 +8,7 @@ def rerank_documents(user_query,unique_docs,reranker,top_n=5):
 
     pairs = [(user_query, doc.page_content) for doc in unique_docs]
 
-    scores = reranker.predict(pairs)
+    scores = reranker.predict(pairs, batch_size=32, show_progress_bar=False, convert_to_numpy=True)
 
     scored_docs = [(doc,score) for doc ,score in zip(unique_docs,scores)]
 
