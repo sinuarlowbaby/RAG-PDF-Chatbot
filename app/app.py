@@ -18,13 +18,10 @@ from sentence_transformers import CrossEncoder
 dotenv.load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Moving app creation below lifespan definition
-
-
 
 logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler("app.log", encoding="utf-8"),
         logging.StreamHandler()
@@ -32,64 +29,77 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ── Infrastructure config (read from env so Docker networking works) ──────────
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "global_rag_store")
 
+# ── CORS — read allowed origins from env (comma-separated list) ───────────────
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000")
+ALLOWED_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting RAG pipeline...")
     try:
-        app.state.client = QdrantClient(url="http://localhost:6333")
+        app.state.client = QdrantClient(url=QDRANT_URL)
         app.state.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
         app.state.embedding_model = OpenAIEmbeddings(
             model="text-embedding-3-small",
             chunk_size=100
         )
-        # ✅ Initialize once at startup — not per-request
+        # Initialize once at startup — not per-request
         app.state.vector_store = QdrantVectorStore(
             client=app.state.client,
             embedding=app.state.embedding_model,
-            collection_name="global_rag_store",
+            collection_name=QDRANT_COLLECTION_NAME,
         )
-        app.state.redis = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+
+        # Parse REDIS_URL into host/port for redis-py
+        _redis_host = REDIS_URL.replace("redis://", "").split(":")[0]
+        _redis_port = int(REDIS_URL.replace("redis://", "").split(":")[1]) if ":" in REDIS_URL.replace("redis://", "") else 6379
+        app.state.redis = redis.Redis(
+            host=_redis_host,
+            port=_redis_port,
+            db=0,
+            decode_responses=True,
+        )
         app.state.sessions = {}
 
-        logger.info("✅ Server is ready!")
+        logger.info("Server is ready!")
     except Exception as e:
-        logger.error(f"❌ Error initializing Server: {e}")
+        logger.error(f"Error initializing Server: {e}")
         raise e
 
-    print("FastAPI server is ready!")
-    print("📖 Swagger UI  →  http://localhost:8000/docs")
-    print("📖 Home Page   →  http://localhost:8000")
-
+    logger.info("FastAPI server is ready!")
+    logger.info("Swagger UI  ->  http://localhost:8000/docs")
+    logger.info("Home Page   ->  http://localhost:8000")
 
     yield  # App handles requests here
 
-    logger.info("🛑 shutting down RAG pipeline...")
+    logger.info("Shutting down RAG pipeline...")
     app.state.client.close()
-    logger.info("✅ RAG pipeline shut down successfully")
+    logger.info("RAG pipeline shut down successfully")
 
 
 app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 jinja2_env = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 from routes.v1.chat_router import chat_router
-from routes.v1.upload import upload_router
+from routes.v1.upload_router import upload_router
 
 app.include_router(chat_router)
 app.include_router(upload_router)
@@ -106,7 +116,6 @@ async def health():
 
 
 import uvicorn
-import os
 if __name__ == "__main__":
     # Change to the app directory so imports like 'schema' work in uvicorn's reload process
     os.chdir(os.path.dirname(os.path.abspath(__file__)))

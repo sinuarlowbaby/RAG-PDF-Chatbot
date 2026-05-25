@@ -1,21 +1,30 @@
+import logging
 import os
-from langchain_community.document_loaders import DirectoryLoader,PyPDFLoader
 
-    
-
+from langchain_community.document_loaders import PyPDFLoader
 from langsmith import traceable
 
+logger = logging.getLogger(__name__)
+
+
 @traceable(run_type="tool", name="Load_Documents")
-def load_documents(files):
-    base_path = os.path.dirname(__file__)
-    project_root = os.path.join(base_path, "../")
-    data_path = os.path.join(project_root, "data")
+def load_documents(files: list[str]) -> list:
+    """Load PDF files from disk into LangChain Document objects.
+
+    Args:
+        files: List of absolute file paths to PDF files.
+
+    Returns:
+        List of LangChain Document objects, one per page.
+    """
     documents = []
     for file_path in files:
         if not file_path.endswith(".pdf"):
+            logger.warning(f"Skipping non-PDF file: {file_path}")
             continue
-        # Use PyPDFLoader directly for individual files
         loader = PyPDFLoader(file_path)
-        documents.extend(loader.load())
-    return documents
+        pages = loader.load()
+        documents.extend(pages)
+        logger.info(f"Loaded {len(pages)} page(s) from {os.path.basename(file_path)}")
 
+    return documents

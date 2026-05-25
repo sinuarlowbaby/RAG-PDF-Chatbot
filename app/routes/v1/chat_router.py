@@ -1,56 +1,74 @@
-from fastapi import APIRouter,Header
-from fastapi.routing import APIRoute
-from fastapi import Request
-from schema.llm_schemas import QueryRequest
-from pipeline.query_pipeline import query_pipeline
-from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
-from retrieval.hybrid_document_retrieval import initialize_retrievers
-from qdrant_client import QdrantClient
-from qdrant_client.http import models
-from langchain_qdrant import QdrantVectorStore
-from langchain_core.documents import Document
 import logging
+
+from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from langchain_core.documents import Document
+from qdrant_client.http import models
+
+from pipeline.query_pipeline import query_pipeline
+from retrieval.hybrid_document_retrieval import initialize_retrievers
+from schema.llm_schemas import QueryRequest
 
 chat_router = APIRouter(prefix="/api/v1", tags=["Chat"])
 logger = logging.getLogger(__name__)
 
+COLLECTION_NAME = "global_rag_store"
+
+
+def _scroll_all_session_docs(client, session_id: str) -> list[Document]:
+    """Paginate through ALL Qdrant records for a session, avoiding the 1000-record hard limit."""
+    doc_chunks: list[Document] = []
+    offset = None
+
+    while True:
+        records, next_offset = client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="metadata.session_id",
+                        match=models.MatchValue(value=session_id),
+                    )
+                ]
+            ),
+            limit=500,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        for item in records:
+            page_content = item.payload.get("page_content", "")
+            metadata = item.payload.get("metadata", {})
+            doc_chunks.append(Document(page_content=page_content, metadata=metadata))
+
+        if next_offset is None:
+            break
+        offset = next_offset
+
+    logger.info(f"Scrolled {len(doc_chunks)} chunks for session {session_id}")
+    return doc_chunks
+
 
 @chat_router.post("/ask")
-async def ask(request: Request, query:QueryRequest, x_session_id: str = Header(...)):
+async def ask(request: Request, query: QueryRequest, x_session_id: str = Header(...)):
     if not request.app.state.redis.exists(f"session:{x_session_id}"):
-        raise HTTPException(status_code=404,detail="Session not found. Please re-upload the document.")
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found. Please re-upload the document.",
+        )
 
-    logger.info(f"Received question: {query.question[:50]}")
+    logger.info(f"Received question: {query.question[:50]!r}")
     embedding_model = request.app.state.embedding_model
     client = request.app.state.client
     reranker_model = request.app.state.reranker
-    vector_store = request.app.state.vector_store  # ✅ reused from startup, no extra API call
-    scroll_result = client.scroll(
-        collection_name="global_rag_store",
-        scroll_filter=models.Filter(
-            must=[
-                models.FieldCondition(
-                    key="metadata.session_id",
-                    match=models.MatchValue(value=x_session_id),
-                )
-            ]
-        ),
-        limit=1000,
-        with_payload=True,
-        with_vectors=False,
-    )
-    doc_chunks = []
-    records, next_page_offset = scroll_result # scroll_result is a tuple of (records, next_page_offset)
-    for item in records:
-        page_content = item.payload.get("page_content", "")
-        metadata = item.payload.get("metadata", {})
-        doc_chunks.append(Document(page_content=page_content, metadata=metadata))
+    vector_store = request.app.state.vector_store
 
-    
+    doc_chunks = _scroll_all_session_docs(client, x_session_id)
+    hybrid_retriever = initialize_retrievers(vector_store, doc_chunks, x_session_id, k=20)
 
-    hybrid_retriever = initialize_retrievers(vector_store,doc_chunks,x_session_id,k=20)
-    
+    redis_client = request.app.state.redis
+
     def stream_token():
         try:
             response_generator = query_pipeline(
@@ -60,23 +78,22 @@ async def ask(request: Request, query:QueryRequest, x_session_id: str = Header(.
                 x_session_id,
                 embedding_model,
                 reranker_model,
+                redis_client=redis_client,
                 k=20,
-                temperature=query.temperature
+                temperature=query.temperature,
             )
-
             for chunk in response_generator:
                 yield f"data: {chunk}\n\n"
             yield "data: [DONE]\n\n"
-
         except Exception as e:
-            logger.error(f"❌ Stream error: {e}")
+            logger.error(f"Stream error: {e}")
             yield f"data: [ERROR]: {str(e)}\n\n"
 
     return StreamingResponse(
         stream_token(),
         media_type="text/event-stream",
-        headers = {
+        headers={
             "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no"
-        }
+            "X-Accel-Buffering": "no",
+        },
     )
