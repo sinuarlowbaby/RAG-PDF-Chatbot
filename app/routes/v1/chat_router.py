@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -12,7 +13,45 @@ from schema.llm_schemas import QueryRequest
 chat_router = APIRouter(prefix="/api/v1", tags=["Chat"])
 logger = logging.getLogger(__name__)
 
-COLLECTION_NAME = "global_rag_store"
+COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "global_rag_store")
+
+
+@chat_router.delete("/session/{session_id}")
+async def delete_session(session_id: str, request: Request):
+    """Purge all Qdrant vectors for a session and remove the Redis key.
+
+    Called by the frontend before uploading a new document so stale data
+    from the previous session never leaks into new queries.
+    """
+    client = request.app.state.client
+    redis = request.app.state.redis
+
+    # Delete all Qdrant points that belong to this session
+    client.delete(
+        collection_name=COLLECTION_NAME,
+        points_selector=models.FilterSelector(
+            filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="metadata.session_id",
+                        match=models.MatchValue(value=session_id),
+                    )
+                ]
+            )
+        ),
+    )
+    logger.info(f"Deleted Qdrant vectors for session {session_id}")
+
+    # Remove the Redis session key and any semantic cache for this session
+    redis.delete(f"session:{session_id}")
+    
+    cache_keys = redis.keys(f"semantic_cache:{session_id}:*")
+    if cache_keys:
+        redis.delete(*cache_keys)
+        
+    logger.info(f"Deleted Redis keys and cache for session {session_id}")
+
+    return {"deleted": True, "session_id": session_id}
 
 
 def _scroll_all_session_docs(client, session_id: str) -> list[Document]:
@@ -65,6 +104,16 @@ async def ask(request: Request, query: QueryRequest, x_session_id: str = Header(
     vector_store = request.app.state.vector_store
 
     doc_chunks = _scroll_all_session_docs(client, x_session_id)
+
+    if not doc_chunks:
+        raise HTTPException(
+            status_code=202,
+            detail=(
+                "Your document is still being processed. "
+                "Please wait a few seconds and try again."
+            ),
+        )
+
     hybrid_retriever = initialize_retrievers(vector_store, doc_chunks, x_session_id, k=20)
 
     redis_client = request.app.state.redis
