@@ -35,7 +35,7 @@ def query_pipeline(
 
     # Semantic cache lookup — only if redis is available
     if redis_client is not None:
-        cached_match = semantic_cache_match(redis_client, user_query_embeddings)
+        cached_match = semantic_cache_match(redis_client, user_query_embeddings, session_id)
         if cached_match:
             cached_context, cached_chunks = cached_match
             logger.info("Semantic cache hit — skipping retrieval")
@@ -71,7 +71,7 @@ def query_pipeline(
     # Store result in semantic cache for future identical/similar queries
     if redis_client is not None:
         saved = store_semantic_cache(
-            redis_client, user_query, new_query, user_query_embeddings, retrieved_context, chunk_data
+            redis_client, user_query, new_query, user_query_embeddings, retrieved_context, session_id, chunk_data
         )
         if saved:
             logger.info("Semantic cache stored (TTL=1h)")

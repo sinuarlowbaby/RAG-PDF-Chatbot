@@ -409,14 +409,25 @@ async function handleUpload(input) {
 
   const newFileNames = Array.from(input.files).map(f => f.name);
 
-  // 1. Add files and mark them as loading immediately
-  newFileNames.forEach(name => {
-    if (!files.includes(name)) files.push(name);
-    loadingFiles.add(name);
-  });
+  // ── Step 1: Purge previous session's data from Qdrant before uploading new files
+  // This is the key fix: without this, old PDF data lingers and contaminates new queries.
+  if (currentSessionId) {
+    try {
+      await fetch(`/api/v1/session/${currentSessionId}`, { method: 'DELETE' });
+    } catch (e) {
+      console.warn('Could not delete old session vectors:', e);
+    }
+    currentSessionId = null;
+    localStorage.removeItem('rag_session_id');
+  }
+
+  // ── Step 2: Reset file list to ONLY the new files (not additive)
+  files = [...newFileNames];
+  newFileNames.forEach(name => loadingFiles.add(name));
+  localStorage.setItem('rag_files', JSON.stringify(files));
   renderFiles();
 
-  // 2. Prepare FormData
+  // ── Step 3: Upload
   const formData = new FormData();
   Array.from(input.files).forEach(f => formData.append('files', f));
 
@@ -433,21 +444,17 @@ async function handleUpload(input) {
 
     const data = await response.json();
     currentSessionId = data.session_id;
-    localStorage.setItem("rag_session_id", currentSessionId);
-    localStorage.setItem("rag_files", JSON.stringify(files));
+    localStorage.setItem('rag_session_id', currentSessionId);
+    localStorage.setItem('rag_files', JSON.stringify(files));
 
-    appendMessage('bot', `Successfully uploaded ${data.documents} document(s). What would you like to know?`);
+    appendMessage('bot', `Successfully uploaded ${data.documents} document(s). Ingestion is running — ask your first question in a moment!`);
 
   } catch (error) {
-    console.error("Upload failed:", error);
-    // Remove failed files from the list
-    newFileNames.forEach(name => {
-      const idx = files.indexOf(name);
-      if (idx !== -1) files.splice(idx, 1);
-    });
+    console.error('Upload failed:', error);
+    files = [];
+    localStorage.removeItem('rag_files');
     appendMessage('bot', `⚠️ Sorry, upload failed. Backend says: ${error.message}`);
   } finally {
-    // Always clear loading state regardless of success or failure
     newFileNames.forEach(name => loadingFiles.delete(name));
     renderFiles();
     input.value = '';
@@ -462,10 +469,19 @@ function clearFiles() {
     renderFiles(); 
 }
 
-function deleteFile(idx) { 
-    files.splice(idx, 1); 
-    localStorage.setItem("rag_files", JSON.stringify(files));
-    renderFiles(); 
+function deleteFile(idx) {
+    files.splice(idx, 1);
+    localStorage.setItem('rag_files', JSON.stringify(files));
+    // If all files are removed, clear the session too — no docs = no valid session
+    if (files.length === 0) {
+      if (currentSessionId) {
+        fetch(`/api/v1/session/${currentSessionId}`, { method: 'DELETE' })
+          .catch(e => console.warn('Could not delete session vectors:', e));
+      }
+      currentSessionId = null;
+      localStorage.removeItem('rag_session_id');
+    }
+    renderFiles();
 }
 
 function renderFiles() {
@@ -586,7 +602,10 @@ async function sendMessage() {
 
     if (!response.ok) {
       const errorData = await response.json();
-      if (response.status === 404) {
+      if (response.status === 202) {
+        // Ingestion still running — tell user to wait, don't clear session
+        appendMessage('bot', `⏳ ${errorData.detail}`);
+      } else if (response.status === 404) {
         // Session expired on backend — clear stale file list & session from UI
         clearFiles();
         appendMessage('bot', `⚠️ ${errorData.detail} Your document list has been cleared.`);

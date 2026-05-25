@@ -27,6 +27,7 @@ def _is_available(redis_client: redis.Redis) -> bool:
 def semantic_cache_match(
     redis_client: redis.Redis,
     user_query_embedding: list,
+    session_id: str,
     threshold: float = CACHE_SIMILARITY_THRESHOLD,
 ):
     """Look up the best matching cached answer for the given query embedding.
@@ -43,7 +44,7 @@ def semantic_cache_match(
         return None
 
     try:
-        keys = redis_client.scan_iter("semantic_cache:*")
+        keys = redis_client.scan_iter(f"semantic_cache:{session_id}:*")
         best_match = None
         highest_score = 0.0
 
@@ -80,6 +81,7 @@ def store_semantic_cache(
     new_query: list,
     query_embedding,
     context: str,
+    session_id: str,
     chunk_data=None,
 ) -> bool:
     """Persist a query + its retrieved context to the semantic cache.
@@ -115,7 +117,7 @@ def store_semantic_cache(
             "created_at": datetime.datetime.now().isoformat(),
         }
 
-        key = f"semantic_cache:{uuid.uuid4()}"
+        key = f"semantic_cache:{session_id}:{uuid.uuid4()}"
         redis_client.set(key, json.dumps(data), ex=CACHE_TTL_SECONDS)
         logger.info(f"Semantic cache stored under {key} (TTL={CACHE_TTL_SECONDS}s)")
         return True

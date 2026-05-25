@@ -4,6 +4,7 @@ import redis
 
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams
 from langchain_qdrant import QdrantVectorStore
 import openai
 import logging
@@ -44,6 +45,14 @@ async def lifespan(app: FastAPI):
     logger.info("Starting RAG pipeline...")
     try:
         app.state.client = QdrantClient(url=QDRANT_URL)
+        
+        existing_collections = [c.name for c in app.state.client.get_collections().collections]
+        if QDRANT_COLLECTION_NAME not in existing_collections:
+            app.state.client.create_collection(
+                collection_name=QDRANT_COLLECTION_NAME,
+                vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
+            )
+            logger.info(f"Created Qdrant collection '{QDRANT_COLLECTION_NAME}'")
         app.state.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
         app.state.embedding_model = OpenAIEmbeddings(
