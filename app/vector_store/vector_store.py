@@ -1,27 +1,37 @@
-from langchain_qdrant import QdrantVectorStore
-from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance
+import logging
+import os
 import uuid
 
-COLLECTION_NAME = "global_rag_store"
-
+from langchain_qdrant import QdrantVectorStore
 from langsmith import traceable
+from qdrant_client.models import Distance, VectorParams
+
+logger = logging.getLogger(__name__)
+
+COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "global_rag_store")
+
 
 @traceable(run_type="tool", name="Ingest_to_Vector_DB")
-def vector_db(docs, embedding_model,client,session_id):
+def vector_db(docs, embedding_model, client, session_id: str) -> QdrantVectorStore:
+    """Ensure the Qdrant collection exists and ingest document chunks.
 
-    collections = client.get_collections().collections
-    existing_collection = [c.name for c in collections]
+    Args:
+        docs: Chunked LangChain Document objects.
+        embedding_model: Initialised embedding model.
+        client: QdrantClient instance.
+        session_id: Used for logging context.
 
-    #create vector store if not exists
-    if COLLECTION_NAME not in existing_collection:
+    Returns:
+        Configured QdrantVectorStore instance.
+    """
+    existing_names = [c.name for c in client.get_collections().collections]
+
+    if COLLECTION_NAME not in existing_names:
         client.create_collection(
             collection_name=COLLECTION_NAME,
-            vectors_config=VectorParams(
-                size = 1536,
-                distance = Distance.COSINE,
-                )
-            )
+            vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
+        )
+        logger.info(f"Created Qdrant collection '{COLLECTION_NAME}'")
 
     vector_store = QdrantVectorStore(
         client=client,
@@ -30,12 +40,10 @@ def vector_db(docs, embedding_model,client,session_id):
     )
 
     vector_store.add_documents(
-        documents = docs,
-        ids = [str(uuid.uuid4()) for _ in range(len(docs))],
-        batch_size = 100
+        documents=docs,
+        ids=[str(uuid.uuid4()) for _ in range(len(docs))],
+        batch_size=256,
     )
-    print(f"✅ successfully ingested documents to vector store {COLLECTION_NAME} for session {session_id}")
+    logger.info(f"Ingested {len(docs)} chunk(s) into '{COLLECTION_NAME}' for session {session_id}")
 
-    #create vector store model
-    
     return vector_store

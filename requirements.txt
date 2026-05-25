@@ -1,22 +1,38 @@
-python-dotenv
-langchain_core
+# ── Core framework ─────────────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
 
+# ── LangChain ecosystem ────────────────────────────────────────────────────────
 langchain
+langchain-core
 langchain-community
 langchain-openai
 langchain-qdrant
 langchain-text-splitters
+langchain-huggingface
+langchain-classic
+
+# ── LLM providers ─────────────────────────────────────────────────────────────
 openai
-qdrant-client
+groq
+
+# ── Embeddings & retrieval ─────────────────────────────────────────────────────
 sentence-transformers
 tiktoken
-redis
+rank_bm25
+pypdf
 numpy
 scikit-learn
-pypdf
-rank_bm25
-streamlit
-fastapi
-uvicorn
+
+# ── Vector store ──────────────────────────────────────────────────────────────
+qdrant-client
+
+# ── Cache / task queue ────────────────────────────────────────────────────────
+redis
 rq
-langchain-huggingface
+
+# ── Observability ─────────────────────────────────────────────────────────────
+langsmith
+
+# ── Config ────────────────────────────────────────────────────────────────────
+python-dotenv
