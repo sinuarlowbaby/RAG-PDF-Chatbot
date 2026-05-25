@@ -1,10 +1,8 @@
-import os
 import uuid
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, UploadFile, File, Request, HTTPException
-from rq import Queue
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, UploadFile
 
 from pipeline.ingest_pipeline import ingest_pipeline
 
@@ -49,7 +47,7 @@ def _validate_and_save(file: UploadFile) -> Path:
 
 
 @upload_router.post("/upload")
-async def upload(req: Request, files: list[UploadFile] = File(...)):
+async def upload(req: Request, background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="No files provided.")
 
@@ -62,14 +60,12 @@ async def upload(req: Request, files: list[UploadFile] = File(...)):
     client = req.app.state.client
     embedding_model = req.app.state.embedding_model
 
-    q = Queue(connection=req.app.state.redis)
-    q.enqueue(ingest_pipeline, client, embedding_model, saved_files, session_id)
+    # Run ingestion in the background after the response is sent.
+    # FastAPI BackgroundTasks — no external queue or worker process needed.
+    background_tasks.add_task(ingest_pipeline, client, embedding_model, saved_files, session_id)
 
     req.app.state.redis.setex(f"session:{session_id}", 1800, "active")
     logger.info(f"Session {session_id} registered — {len(saved_files)} file(s) queued for ingestion")
-
-    if not hasattr(req.app.state, "sessions"):
-        req.app.state.sessions = {}
 
     return {
         "session_id": session_id,
