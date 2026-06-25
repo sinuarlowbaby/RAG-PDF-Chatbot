@@ -1,131 +1,180 @@
-import os
-import dotenv
-import redis
+"""
+app/app.py
+─────────────────────────────────────────────────────────────────────────────
+FastAPI application entry point.
 
+Responsibilities:
+  - Bootstrap logging
+  - Initialise shared infrastructure (Qdrant, Redis, embeddings, reranker)
+    via the FastAPI lifespan context manager
+  - Register middleware (CORS)
+  - Mount API routers
+  - Serve the frontend template
+  - Expose /health endpoint
+─────────────────────────────────────────────────────────────────────────────
+"""
+
+# ── Standard library ─────────────────────────────────────────────────────────
+import logging
+import os
+from contextlib import asynccontextmanager
+from datetime import datetime
+
+# ── Third-party ──────────────────────────────────────────────────────────────
+import openai
+import redis
+import uvicorn
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
 from langchain_openai import OpenAIEmbeddings
+from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
-from langchain_qdrant import QdrantVectorStore
-import openai
-import logging
-from fastapi import FastAPI, Request
-from contextlib import asynccontextmanager
-from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
-from fastapi.templating import Jinja2Templates
-from schema.llm_schemas import HealthResponse
 from sentence_transformers import CrossEncoder
 
-dotenv.load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# ── Internal ─────────────────────────────────────────────────────────────────
+from config import settings, setup_logging
+from routes.v1.chat_router import chat_router
+from routes.v1.upload_router import upload_router
+from schema.llm_schemas import HealthResponse
 
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("app.log", encoding="utf-8"),
-        logging.StreamHandler()
-    ]
-)
+# ── Bootstrap logging first, before any logger is created ────────────────────
+setup_logging(settings)
 logger = logging.getLogger(__name__)
 
-# ── Infrastructure config (read from env so Docker networking works) ──────────
-QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "global_rag_store")
-
-# ── CORS — read allowed origins from env (comma-separated list) ───────────────
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000")
-ALLOWED_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+# ── Set OpenAI key from centralised settings ──────────────────────────────────
+openai.api_key = settings.openai_api_key
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Lifespan — startup / shutdown logic
+# ─────────────────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Initialise and tear down shared infrastructure resources."""
     logger.info("Starting RAG pipeline...")
     try:
-        app.state.client = QdrantClient(url=QDRANT_URL)
-        
-        existing_collections = [c.name for c in app.state.client.get_collections().collections]
-        if QDRANT_COLLECTION_NAME not in existing_collections:
-            app.state.client.create_collection(
-                collection_name=QDRANT_COLLECTION_NAME,
-                vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
-            )
-            logger.info(f"Created Qdrant collection '{QDRANT_COLLECTION_NAME}'")
-        app.state.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+        # ── Qdrant vector database ────────────────────────────────────────────
+        app.state.client = QdrantClient(url=settings.qdrant_url)
 
+        existing_collections = [
+            c.name for c in app.state.client.get_collections().collections
+        ]
+        if settings.qdrant_collection_name not in existing_collections:
+            app.state.client.create_collection(
+                collection_name=settings.qdrant_collection_name,
+                vectors_config=VectorParams(
+                    size=settings.embedding_dimensions,
+                    distance=Distance.COSINE,
+                ),
+            )
+            logger.info(f"Created Qdrant collection '{settings.qdrant_collection_name}'")
+
+        # ── Cross-encoder reranker ────────────────────────────────────────────
+        app.state.reranker = CrossEncoder(settings.reranker_model)
+
+        # ── OpenAI embeddings (shared, not per-request) ───────────────────────
         app.state.embedding_model = OpenAIEmbeddings(
-            model="text-embedding-3-small",
-            chunk_size=100
+            model=settings.embedding_model,
+            chunk_size=settings.embedding_chunk_size,
         )
-        # Initialize once at startup — not per-request
+
+        # ── Qdrant vector store wrapper ───────────────────────────────────────
         app.state.vector_store = QdrantVectorStore(
             client=app.state.client,
             embedding=app.state.embedding_model,
-            collection_name=QDRANT_COLLECTION_NAME,
+            collection_name=settings.qdrant_collection_name,
         )
 
-        # Parse REDIS_URL into host/port for redis-py
-        _redis_host = REDIS_URL.replace("redis://", "").split(":")[0]
-        _redis_port = int(REDIS_URL.replace("redis://", "").split(":")[1]) if ":" in REDIS_URL.replace("redis://", "") else 6379
+        # ── Redis cache ───────────────────────────────────────────────────────
         app.state.redis = redis.Redis(
-            host=_redis_host,
-            port=_redis_port,
+            host=settings.redis_host,
+            port=settings.redis_port,
             db=0,
             decode_responses=True,
         )
+
+        # ── In-memory session store ───────────────────────────────────────────
         app.state.sessions = {}
 
-        logger.info("Server is ready!")
-    except Exception as e:
-        logger.error(f"Error initializing Server: {e}")
-        raise e
+        logger.info("All services initialised successfully.")
+
+    except Exception as exc:
+        logger.error(f"Failed to initialise server: {exc}")
+        raise
 
     logger.info("FastAPI server is ready!")
-    logger.info("Swagger UI  ->  http://localhost:8000/docs")
-    logger.info("Home Page   ->  http://localhost:8000")
+    logger.info(f"Swagger UI  -> http://{settings.host}:{settings.port}/docs")
+    logger.info(f"Home Page   -> http://{settings.host}:{settings.port}")
 
-    yield  # App handles requests here
+    yield  # ← application handles requests here
 
+    # ── Shutdown ──────────────────────────────────────────────────────────────
     logger.info("Shutting down RAG pipeline...")
     app.state.client.close()
-    logger.info("RAG pipeline shut down successfully")
+    logger.info("RAG pipeline shut down successfully.")
 
 
-app = FastAPI(lifespan=lifespan)
+# ─────────────────────────────────────────────────────────────────────────────
+# Application factory
+# ─────────────────────────────────────────────────────────────────────────────
+app = FastAPI(
+    title="RAG PDF Chatbot",
+    description="Upload PDFs and ask questions using Retrieval-Augmented Generation.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
+# ── CORS middleware ───────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ── Templates ─────────────────────────────────────────────────────────────────
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+jinja2_env = Jinja2Templates(directory=os.path.join(_BASE_DIR, "templates"))
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-jinja2_env = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
-
-from routes.v1.chat_router import chat_router
-from routes.v1.upload_router import upload_router
-
+# ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(chat_router)
 app.include_router(upload_router)
 
 
-@app.get("/")
+# ─────────────────────────────────────────────────────────────────────────────
+# Routes
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/", include_in_schema=False)
 async def root(request: Request):
+    """Serve the main chatbot UI."""
     return jinja2_env.TemplateResponse(request=request, name="rag_chatbot.html")
 
 
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health():
-    return {"status": "ok", "pipeline_ready": True, "timestamp": datetime.now().isoformat()}
+    """Health-check endpoint for Docker / load-balancer probes."""
+    return {
+        "status": "ok",
+        "pipeline_ready": True,
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
-import uvicorn
+# ─────────────────────────────────────────────────────────────────────────────
+# Dev entrypoint
+# ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # Change to the app directory so imports like 'schema' work in uvicorn's reload process
+    # Change to the app directory so module imports resolve correctly
+    # when uvicorn's --reload spawns a child process.
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, log_config=None, log_level="info")
+    uvicorn.run(
+        "app:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.reload,
+        log_config=None,          # let our logging config take precedence
+        log_level=settings.log_level,
+    )

@@ -4,13 +4,14 @@ from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, UploadFile
 
+from config import settings
 from pipeline.ingest_pipeline import ingest_pipeline
 
 upload_router = APIRouter(prefix="/api/v1", tags=["Upload"])
 logger = logging.getLogger(__name__)
 
-UPLOAD_DIR = Path("uploads")
-MAX_FILE_SIZE_MB = 50
+UPLOAD_DIR = settings.upload_dir
+MAX_FILE_SIZE_MB = settings.max_upload_size_mb
 ALLOWED_EXTENSIONS = {".pdf"}
 
 
