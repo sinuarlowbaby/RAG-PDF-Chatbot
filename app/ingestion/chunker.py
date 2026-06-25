@@ -4,23 +4,48 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langsmith import traceable
 
-load_dotenv()
-
 logger = logging.getLogger(__name__)
+
+# Minimum number of characters a page must have to be worth chunking.
+# Avoids wasting vector slots on scanned / image-only PDF pages.
+_MIN_PAGE_CHARS = 50
 
 
 def clean_text(text: str) -> str:
-    text = re.sub(r"\s+", " ", text)
-    text = re.sub(r"\. \. \. \. \. \. \. \. ", "", text)
+    """Normalise whitespace and strip common PDF artefacts."""
+    text = re.sub(r"\s+", " ", text)                    # collapse whitespace
+    text = re.sub(r"(\. ){4,}", "", text)               # strip dot leaders
     return text.strip()
 
 
 @traceable(run_type="tool", name="Doc_Chunker")
 def doc_chunker(raw_documents, session_id: str) -> list:
+    # ── 1. Filter out pages that contain no usable text ──────────────────────
+    # PyPDFLoader returns empty page_content for scanned / image-only pages.
+    usable_docs = [
+        doc for doc in raw_documents
+        if len(doc.page_content.strip()) >= _MIN_PAGE_CHARS
+    ]
+
+    skipped = len(raw_documents) - len(usable_docs)
+    if skipped:
+        logger.warning(
+            f"{skipped} page(s) skipped — no extractable text "
+            f"(scanned/image-only PDF?). "
+            f"Consider using a PDF with selectable text."
+        )
+
+    if not usable_docs:
+        logger.error(
+            "No usable text found in any page. "
+            "The PDF may be entirely image-based and cannot be processed."
+        )
+        return []
+
+    # ── 2. Split into chunks ──────────────────────────────────────────────────
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         encoding_name="cl100k_base",
         chunk_size=450,
@@ -28,19 +53,28 @@ def doc_chunker(raw_documents, session_id: str) -> list:
         separators=["\n\n", "\n", " ", ""],
     )
 
-    chunks = text_splitter.split_documents(raw_documents)
+    chunks = text_splitter.split_documents(usable_docs)
 
+    # ── 3. Clean text and attach metadata ────────────────────────────────────
+    final_chunks = []
     for i, doc in enumerate(chunks):
-        doc.page_content = clean_text(doc.page_content)
+        cleaned = clean_text(doc.page_content)
+        if not cleaned:          # skip chunks that become empty after cleaning
+            continue
+        doc.page_content = cleaned
         doc.metadata.update({
             "chunk_number": i,
             "session_id": session_id,
             "chunk_id": str(uuid.uuid4()),
-            "source": doc.metadata["source"],
-            "page": doc.metadata["page"],
-            "file_name": Path(doc.metadata["source"]).name,
+            "source": doc.metadata.get("source", ""),
+            "page": doc.metadata.get("page", 0),
+            "file_name": Path(doc.metadata.get("source", "unknown")).name,
             "timestamp": datetime.now().isoformat(),
         })
+        final_chunks.append(doc)
 
-    logger.info(f"Split {len(raw_documents)} document(s) into {len(chunks)} chunk(s)")
-    return chunks
+    logger.info(
+        f"Split {len(raw_documents)} page(s) → {len(usable_docs)} usable → "
+        f"{len(final_chunks)} chunk(s)"
+    )
+    return final_chunks
