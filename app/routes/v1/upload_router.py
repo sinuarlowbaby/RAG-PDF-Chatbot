@@ -63,9 +63,14 @@ async def upload(req: Request, background_tasks: BackgroundTasks, files: list[Up
 
     # Run ingestion in the background after the response is sent.
     # FastAPI BackgroundTasks — no external queue or worker process needed.
-    background_tasks.add_task(ingest_pipeline, client, embedding_model, saved_files, session_id)
+    # Pass redis_client so ingest_pipeline can expire the session if the PDF
+    # has no extractable text (scanned/image-only), preventing an endless 202 loop.
+    redis_client = req.app.state.redis
+    background_tasks.add_task(
+        ingest_pipeline, client, embedding_model, saved_files, session_id, redis_client
+    )
 
-    req.app.state.redis.setex(f"session:{session_id}", 1800, "active")
+    redis_client.setex(f"session:{session_id}", 1800, "active")
     logger.info(f"Session {session_id} registered — {len(saved_files)} file(s) queued for ingestion")
 
     return {

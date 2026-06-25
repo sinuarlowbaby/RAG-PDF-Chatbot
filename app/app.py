@@ -105,8 +105,8 @@ async def lifespan(app: FastAPI):
         raise
 
     logger.info("FastAPI server is ready!")
-    logger.info(f"Swagger UI  -> http://{settings.host}:{settings.port}/docs")
-    logger.info(f"Home Page   -> http://{settings.host}:{settings.port}")
+    logger.info(f"Swagger UI  -> http://localhost:{settings.port}/docs")
+    logger.info(f"Home Page   -> http://localhost:{settings.port}")
 
     yield  # ← application handles requests here
 

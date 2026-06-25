@@ -1,14 +1,15 @@
 import logging
-import os
 import uuid
 
 from langchain_qdrant import QdrantVectorStore
 from langsmith import traceable
 from qdrant_client.models import Distance, VectorParams
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
-COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "global_rag_store")
+COLLECTION_NAME = settings.qdrant_collection_name
 
 
 @traceable(run_type="tool", name="Ingest_to_Vector_DB")

@@ -637,6 +637,7 @@ async function sendMessage() {
     const decoder = new TextDecoder("utf-8");
     let done = false;
     let buffer = "";
+    let fullText = ""; // ← accumulate plain text safely
 
     while (!done) {
       const { value, done: readerDone } = await reader.read();
@@ -648,33 +649,50 @@ async function sendMessage() {
         while ((bIndex = buffer.indexOf('\n\n')) !== -1) {
             const messageStr = buffer.slice(0, bIndex);
             buffer = buffer.slice(bIndex + 2);
-            
+
             const lines = messageStr.split('\n');
             for (let line of lines) {
-                if (line.startsWith('data: ')) {
-                    const dataContent = line.replace('data: ', '');
-                    
-                    if (dataContent.trim() === '[DONE]') {
-                        done = true; // exit loop safely
-                        break;
-                    } else if (dataContent.includes('[ERROR]')) {
-                        bubble.innerHTML += `<br/><span style="color: red;">${dataContent}</span>`;
-                    } else if (dataContent.startsWith('[CONTEXT]: ')) {
-                        try {
-                            const chunksData = JSON.parse(dataContent.substring(11));
-                            renderChunks(chunksData);
-                        } catch (e) {
-                            console.error("Error parsing context JSON:", e);
-                        }
-                    } else {
-                        // Append the actual word to the bubble
-                        bubble.innerHTML += dataContent;
-                        msgs.scrollTop = msgs.scrollHeight; // Auto-scroll down
+                if (!line.startsWith('data: ')) continue;
+
+                // Use slice(6) — safer than replace() which could corrupt tokens
+                // containing the literal string 'data: '
+                const dataContent = line.slice(6);
+
+                if (dataContent.trim() === '[DONE]') {
+                    done = true;
+                    break;
+                } else if (dataContent.startsWith('[ERROR]')) {
+                    // Show error inline without breaking layout
+                    const errSpan = document.createElement('span');
+                    errSpan.style.color = 'salmon';
+                    errSpan.textContent = dataContent;
+                    bubble.appendChild(document.createElement('br'));
+                    bubble.appendChild(errSpan);
+                } else if (dataContent.startsWith('[CONTEXT]: ')) {
+                    try {
+                        const chunksData = JSON.parse(dataContent.slice(11));
+                        renderChunks(chunksData);
+                    } catch (e) {
+                        console.error('Error parsing context JSON:', e);
                     }
+                } else {
+                    // ✅ Safe: accumulate raw text, never treat as HTML
+                    fullText += dataContent;
+                    bubble.textContent = fullText;
+                    msgs.scrollTop = msgs.scrollHeight;
                 }
             }
         }
       }
+    }
+
+    // Stream complete — now render newlines as <br> for proper formatting
+    if (fullText) {
+      bubble.innerHTML = fullText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
     }
   } catch (err) {
     removeTyping();

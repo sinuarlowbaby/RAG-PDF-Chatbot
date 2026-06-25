@@ -1,16 +1,13 @@
-import json
 import logging
-import os
 
-from dotenv import load_dotenv
 from groq import Groq
 from langsmith import traceable
 
-load_dotenv()
+from config import settings
 
 logger = logging.getLogger(__name__)
 
-_groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+_groq_client = Groq(api_key=settings.groq_api_key)
 
 _SYSTEM_PROMPT = """
 You are a retrieval-augmented AI assistant.
