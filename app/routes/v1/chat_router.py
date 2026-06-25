@@ -1,11 +1,11 @@
 import logging
-import os
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from langchain_core.documents import Document
 from qdrant_client.http import models
 
+from config import settings
 from pipeline.query_pipeline import query_pipeline
 from retrieval.hybrid_document_retrieval import initialize_retrievers
 from schema.llm_schemas import QueryRequest
@@ -13,7 +13,7 @@ from schema.llm_schemas import QueryRequest
 chat_router = APIRouter(prefix="/api/v1", tags=["Chat"])
 logger = logging.getLogger(__name__)
 
-COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "global_rag_store")
+COLLECTION_NAME = settings.qdrant_collection_name
 
 
 @chat_router.delete("/session/{session_id}")

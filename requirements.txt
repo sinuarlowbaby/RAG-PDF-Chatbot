@@ -35,3 +35,4 @@ langsmith
 
 # ── Config ────────────────────────────────────────────────────────────────────
 python-dotenv
+pydantic-settings
