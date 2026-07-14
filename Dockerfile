@@ -1,4 +1,5 @@
-# Use an official Python runtime as a parent image
+# Use Python 3.11 — required for full langfuse v2.x compatibility
+# (langfuse.decorators emits SyntaxWarnings on Python 3.14+)
 FROM python:3.11-slim
 
 # Prevent Python from writing .pyc files and enable unbuffered logs

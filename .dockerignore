@@ -28,3 +28,16 @@ old_main.py
 # Vector stores / Data
 chroma_db/
 faiss_index/
+*.pdf
+*.zip
+*.tar.gz
+
+# Langfuse self-hosted stack (not needed in app image)
+docker-compose.langfuse.yml
+langfuse_postgres_data/
+langfuse_clickhouse_data/
+langfuse_minio_data/
+
+# Docs / CI
+README.md
+.env.example
