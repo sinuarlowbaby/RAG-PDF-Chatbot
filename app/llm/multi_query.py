@@ -4,7 +4,7 @@ import os
 
 from dotenv import load_dotenv
 from groq import Groq
-from langsmith import traceable
+from langfuse.decorators import observe
 
 load_dotenv()
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-@traceable(run_type="llm", name="Generate_Multiple_Queries", metadata={"model": "llama-3.3-70b-versatile"})
+@observe(name="Generate_Multiple_Queries")
 def generate_queries(user_query: str) -> list[str]:
     """Generate semantically diverse search queries from the user's original question.
 

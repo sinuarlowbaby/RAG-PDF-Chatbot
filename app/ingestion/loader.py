@@ -2,12 +2,12 @@ import logging
 import os
 
 from langchain_community.document_loaders import PyPDFLoader
-from langsmith import traceable
+from langfuse.decorators import observe
 
 logger = logging.getLogger(__name__)
 
 
-@traceable(run_type="tool", name="Load_Documents")
+@observe(name="Load_Documents")
 def load_documents(files: list[str]) -> list:
     """Load PDF files from disk into LangChain Document objects.
 

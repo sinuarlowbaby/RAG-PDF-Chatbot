@@ -2,7 +2,7 @@ import json
 import logging
 import math
 
-from langsmith import traceable
+from langfuse.decorators import observe
 
 from llm.llm_client import llm_client
 from llm.multi_query import generate_queries
@@ -15,7 +15,7 @@ from utils.time_calculate import time_calculate
 logger = logging.getLogger(__name__)
 
 
-@traceable(run_type="chain", name="RAG_Query_Pipeline")
+@observe(name="RAG_Query_Pipeline")
 def query_pipeline(
     vector_store,
     user_query,

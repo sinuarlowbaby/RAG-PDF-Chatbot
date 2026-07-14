@@ -2,14 +2,14 @@ import logging
 import os
 
 import tiktoken
-from langsmith import traceable
+from langfuse.decorators import observe
 
 logger = logging.getLogger(__name__)
 
 _encoding = tiktoken.get_encoding("o200k_base")
 
 
-@traceable(run_type="tool", name="Build_Context")
+@observe(name="Build_Context")
 def build_context(reranked_docs, token_limit: int = 5000) -> str:
     """Concatenate reranked document chunks up to a token budget.
 

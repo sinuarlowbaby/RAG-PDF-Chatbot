@@ -1,12 +1,12 @@
 import logging
 
-from langsmith import traceable
+from langfuse.decorators import observe
 from sentence_transformers import CrossEncoder
 
 logger = logging.getLogger(__name__)
 
 
-@traceable(run_type="tool", name="Rerank_Documents")
+@observe(name="Rerank_Documents")
 def rerank_documents(user_query: str, unique_docs: list, reranker: CrossEncoder, top_n: int = 5) -> list:
     """Score and rerank document chunks using a cross-encoder model.
 
