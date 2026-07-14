@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langfuse.decorators import observe
+from langsmith import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
-@observe(name="Doc_Chunker")
+@traceable(run_type="tool", name="Doc_Chunker")
 def doc_chunker(raw_documents, session_id: str) -> list:
     # ── 1. Filter out pages that contain no usable text ──────────────────────
     # PyPDFLoader returns empty page_content for scanned / image-only pages.

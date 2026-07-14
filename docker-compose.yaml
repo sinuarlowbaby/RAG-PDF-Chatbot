@@ -30,11 +30,6 @@ services:
       retries: 5
       start_period: 5s
 
-
-  # Langfuse observability stack is in docker-compose.langfuse.yml
-  # Run: docker compose -f docker-compose.langfuse.yml up -d
-
-
   # 3. Python RAG Application
   app:
     build: .

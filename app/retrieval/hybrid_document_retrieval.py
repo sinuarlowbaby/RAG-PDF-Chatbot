@@ -2,7 +2,7 @@ import logging
 
 from langchain_classic.retrievers import EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
-from langfuse.decorators import observe
+from langsmith import traceable
 from qdrant_client.http import models
 
 from retrieval.deduplication import deduplication
@@ -52,7 +52,7 @@ def initialize_retrievers(vector_store, docs, session_id: str, k: int = 20):
     return hybrid_retriever
 
 
-@observe(name="Execute_Hybrid_Retrieval")
+@traceable(name="Execute_Hybrid_Retrieval")
 def retrieve_hybrid_documents(hybrid_retriever, new_user_query: str, k: int = 10):
     """Invoke the hybrid retriever and return retrieved documents."""
     logger.debug("Retrieving documents via hybrid search...")

@@ -2,7 +2,7 @@ import logging
 import uuid
 
 from langchain_qdrant import QdrantVectorStore
-from langfuse.decorators import observe
+from langsmith import traceable
 from qdrant_client.models import Distance, VectorParams
 
 from config import settings
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 COLLECTION_NAME = settings.qdrant_collection_name
 
 
-@observe(name="Ingest_to_Vector_DB")
+@traceable(run_type="tool", name="Ingest_to_Vector_DB")
 def vector_db(docs, embedding_model, client, session_id: str) -> QdrantVectorStore:
     """Ensure the Qdrant collection exists and ingest document chunks.
 

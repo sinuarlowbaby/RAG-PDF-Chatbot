@@ -31,7 +31,7 @@ qdrant-client
 redis
 
 # ── Observability ─────────────────────────────────────────────────────────────
-langfuse>=2.60,<3          # v2.x has langfuse.decorators; v4.x dropped it
+langsmith
 
 # ── Config ────────────────────────────────────────────────────────────────────
 python-dotenv

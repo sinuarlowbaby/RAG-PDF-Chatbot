@@ -1,7 +1,7 @@
 import logging
 
 from groq import Groq
-from langfuse.decorators import observe
+from langsmith import traceable
 
 from config import settings
 
@@ -35,7 +35,7 @@ RESPONSE STYLE:
 """
 
 
-@observe(name="LLM_Client")
+@traceable(run_type="llm", name="LLM_Client", metadata={"model": "llama-3.3-70b-versatile"})
 def llm_client(retrieved_context: str, user_query: str, temperature: float = 0.2):
     """Stream tokens from the LLM using the retrieved context as grounding.
 
