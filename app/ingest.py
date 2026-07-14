@@ -3,7 +3,8 @@ import uuid
 import logging
 from pathlib import Path
 from datetime import datetime
-
+import os
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langfuse.decorators import observe
 
@@ -13,6 +14,28 @@ logger = logging.getLogger(__name__)
 # Avoids wasting vector slots on scanned / image-only PDF pages.
 _MIN_PAGE_CHARS = 50
 
+
+@observe(name="Load_Documents")
+def load_documents(files: list[str]) -> list:
+    """Load PDF files from disk into LangChain Document objects.
+
+    Args:
+        files: List of absolute file paths to PDF files.
+
+    Returns:
+        List of LangChain Document objects, one per page.
+    """
+    documents = []
+    for file_path in files:
+        if not file_path.endswith(".pdf"):
+            logger.warning(f"Skipping non-PDF file: {file_path}")
+            continue
+        loader = PyPDFLoader(file_path)
+        pages = loader.load()
+        documents.extend(pages)
+        logger.info(f"Loaded {len(pages)} page(s) from {os.path.basename(file_path)}")
+
+    return documents
 
 def clean_text(text: str) -> str:
     """Normalise whitespace and strip common PDF artefacts."""

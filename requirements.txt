@@ -1,6 +1,8 @@
 # ── Core framework ─────────────────────────────────────────────────────────────
 fastapi
 uvicorn[standard]
+python-multipart
+
 
 # ── LangChain ecosystem ────────────────────────────────────────────────────────
 langchain
@@ -17,7 +19,7 @@ openai
 groq
 
 # ── Embeddings & retrieval ─────────────────────────────────────────────────────
-sentence-transformers
+sentence-transformers>=3.0.0
 tiktoken
 rank_bm25
 pypdf
@@ -36,3 +38,10 @@ langfuse>=2.60,<3          # v2.x has langfuse.decorators; v4.x dropped it
 # ── Config ────────────────────────────────────────────────────────────────────
 python-dotenv
 pydantic-settings
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest
+pytest-cov
+pytest-asyncio
+httpx
+
