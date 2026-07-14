@@ -1,6 +1,8 @@
 # ── Core framework ─────────────────────────────────────────────────────────────
 fastapi
 uvicorn[standard]
+python-multipart
+
 
 # ── LangChain ecosystem ────────────────────────────────────────────────────────
 langchain
