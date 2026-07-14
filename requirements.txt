@@ -36,3 +36,10 @@ langfuse>=2.60,<3          # v2.x has langfuse.decorators; v4.x dropped it
 # ── Config ────────────────────────────────────────────────────────────────────
 python-dotenv
 pydantic-settings
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest
+pytest-cov
+pytest-asyncio
+httpx
+

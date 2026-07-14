@@ -35,8 +35,8 @@ from sentence_transformers import CrossEncoder
 
 # ── Internal ─────────────────────────────────────────────────────────────────
 from config import settings, setup_logging
-from routes.v1.chat_router import chat_router
-from routes.v1.upload_router import upload_router
+from routes.chat_router import chat_router
+from routes.upload_router import upload_router
 from schema.llm_schemas import HealthResponse
 
 # ── Bootstrap logging first, before any logger is created ────────────────────
@@ -56,13 +56,13 @@ async def lifespan(app: FastAPI):
     logger.info("Starting RAG pipeline...")
     try:
         # ── Qdrant vector database ────────────────────────────────────────────
-        app.state.client = QdrantClient(url=settings.qdrant_url)
+        app.state.qdrant_client = QdrantClient(url=settings.qdrant_url)
 
         existing_collections = [
-            c.name for c in app.state.client.get_collections().collections
+            c.name for c in app.state.qdrant_client.get_collections().collections
         ]
         if settings.qdrant_collection_name not in existing_collections:
-            app.state.client.create_collection(
+            app.state.qdrant_client.create_collection(
                 collection_name=settings.qdrant_collection_name,
                 vectors_config=VectorParams(
                     size=settings.embedding_dimensions,
@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
 
         # ── Qdrant vector store wrapper ───────────────────────────────────────
         app.state.vector_store = QdrantVectorStore(
-            client=app.state.client,
+            client=app.state.qdrant_client,
             embedding=app.state.embedding_model,
             collection_name=settings.qdrant_collection_name,
         )
@@ -112,7 +112,7 @@ async def lifespan(app: FastAPI):
 
     # ── Shutdown ──────────────────────────────────────────────────────────────
     logger.info("Shutting down RAG pipeline...")
-    app.state.client.close()
+    app.state.qdrant_client.close()
     logger.info("RAG pipeline shut down successfully.")
 
 
@@ -122,7 +122,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="RAG PDF Chatbot",
     description="Upload PDFs and ask questions using Retrieval-Augmented Generation.",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
@@ -167,8 +167,6 @@ async def health():
 # Dev entrypoint
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # Change to the app directory so module imports resolve correctly
-    # when uvicorn's --reload spawns a child process.
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     uvicorn.run(
         "app:app",

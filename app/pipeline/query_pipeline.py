@@ -4,13 +4,12 @@ import math
 
 from langfuse.decorators import observe
 
-from llm.llm_client import llm_client
-from llm.multi_query import generate_queries
+from llm import llm_client, generate_queries
 from retrieval.build_context import build_context
-from retrieval.hybrid_document_retrieval import retrieve_hybrid_documents, deduplication
+from retrieval.hybrid import retrieve_hybrid_documents
+from retrieval.deduplication import deduplication
 from retrieval.reranker import rerank_documents
 from utils.semantic_cache import semantic_cache_match, store_semantic_cache
-from utils.time_calculate import time_calculate
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +26,6 @@ def query_pipeline(
     k: int = 20,
     temperature: float = 0.7,
 ):
-    t1 = time_calculate()
-
     new_query = generate_queries(user_query)
     all_query = ". ".join(new_query)
     user_query_embeddings = embedding_model.embed_query(all_query)
@@ -48,9 +45,6 @@ def query_pipeline(
     unique_docs = deduplication(all_docs, k=10)
     reranked_docs = rerank_documents(user_query, unique_docs, reranker=reranker_model)
     retrieved_context = build_context(reranked_docs)
-
-    t2 = time_calculate()
-    logger.info(f"Retrieved documents in {t2 - t1:.2f}s")
 
     chunk_data = []
     for doc, score in reranked_docs:
@@ -77,6 +71,3 @@ def query_pipeline(
             logger.info("Semantic cache stored (TTL=1h)")
         else:
             logger.debug("Semantic cache not stored")
-
-    t3 = time_calculate()
-    logger.info(f"Total pipeline time: {t3 - t1:.2f}s  (retrieval={t2 - t1:.2f}s, generation={t3 - t2:.2f}s)")

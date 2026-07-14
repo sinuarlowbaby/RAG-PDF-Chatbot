@@ -7,7 +7,7 @@ from qdrant_client.http import models
 
 from config import settings
 from pipeline.query_pipeline import query_pipeline
-from retrieval.hybrid_document_retrieval import initialize_retrievers
+from retrieval.hybrid import initialize_retrievers
 from schema.llm_schemas import QueryRequest
 
 chat_router = APIRouter(prefix="/api/v1", tags=["Chat"])
@@ -23,7 +23,7 @@ async def delete_session(session_id: str, request: Request):
     Called by the frontend before uploading a new document so stale data
     from the previous session never leaks into new queries.
     """
-    client = request.app.state.client
+    client = request.app.state.qdrant_client
     redis = request.app.state.redis
 
     # Delete all Qdrant points that belong to this session
@@ -99,11 +99,11 @@ async def ask(request: Request, query: QueryRequest, x_session_id: str = Header(
 
     logger.info(f"Received question: {query.question[:50]!r}")
     embedding_model = request.app.state.embedding_model
-    client = request.app.state.client
+    qdrant_client = request.app.state.qdrant_client
     reranker_model = request.app.state.reranker
     vector_store = request.app.state.vector_store
 
-    doc_chunks = _scroll_all_session_docs(client, x_session_id)
+    doc_chunks = _scroll_all_session_docs(qdrant_client, x_session_id)
 
     if not doc_chunks:
         raise HTTPException(

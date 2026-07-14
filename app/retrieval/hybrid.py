@@ -55,7 +55,9 @@ def initialize_retrievers(vector_store, docs, session_id: str, k: int = 20):
 @observe(name="Execute_Hybrid_Retrieval")
 def retrieve_hybrid_documents(hybrid_retriever, new_user_query: str, k: int = 10):
     """Invoke the hybrid retriever and return retrieved documents."""
+
     logger.debug("Retrieving documents via hybrid search...")
     docs = hybrid_retriever.invoke(new_user_query)
+
     logger.info(f"Hybrid retrieval returned {len(docs)} document(s)")
     return docs

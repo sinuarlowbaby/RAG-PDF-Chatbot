@@ -58,7 +58,7 @@ async def upload(req: Request, background_tasks: BackgroundTasks, files: list[Up
         saved_files.append(str(path))
 
     session_id = str(uuid.uuid4())
-    client = req.app.state.client
+    client = req.app.state.qdrant_client
     embedding_model = req.app.state.embedding_model
 
     # Run ingestion in the background after the response is sent.
