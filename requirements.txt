@@ -17,7 +17,7 @@ openai
 groq
 
 # ── Embeddings & retrieval ─────────────────────────────────────────────────────
-sentence-transformers
+sentence-transformers>=3.0.0
 tiktoken
 rank_bm25
 pypdf
