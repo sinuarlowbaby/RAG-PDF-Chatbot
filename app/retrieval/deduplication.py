@@ -1,12 +1,12 @@
 import re
 import logging
 
-from langsmith import traceable
+from langfuse.decorators import observe
 
 logger = logging.getLogger(__name__)
 
 
-@traceable(run_type="tool", name="Deduplicate_Documents")
+@observe(name="Deduplicate_Documents")
 def deduplication(docs, k: int = 20) -> list:
     """Remove duplicate document chunks based on normalised content + source.
 

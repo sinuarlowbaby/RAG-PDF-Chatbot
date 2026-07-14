@@ -1,0 +1,205 @@
+# -----------------------------------------------------------------------------
+# Langfuse v3 – Self-Hosted Stack
+#
+# UI   ? http://localhost:3000
+# S3   ? http://localhost:9000  (MinIO console: http://localhost:9001)
+#
+# Usage:
+#   docker compose -f docker-compose.langfuse.yml up -d
+#
+# First-time setup:
+#   Open http://localhost:3000 ? create an account ? create a project
+#   ? copy Secret Key + Public Key ? paste into .env
+# -----------------------------------------------------------------------------
+
+name: langfuse
+
+# -- Shared secrets / tunables -------------------------------------------------
+x-langfuse-env: &langfuse-env
+  DATABASE_URL: postgresql://langfuse:langfuse@langfuse-postgres:5432/langfuse
+  SALT: "change-me-random-salt-32-chars!!"
+  ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+  NEXTAUTH_URL: "http://localhost:3000"
+  NEXTAUTH_SECRET: "change-me-nextauth-secret"
+  LANGFUSE_LOG_LEVEL: info
+  TELEMETRY_ENABLED: "false"
+  LANGFUSE_INIT_ORG_ID: "my-org"
+  LANGFUSE_INIT_ORG_NAME: "My Organisation"
+  LANGFUSE_INIT_PROJECT_ID: "my-project"
+  LANGFUSE_INIT_PROJECT_NAME: "RAG-PDF-Chatbot"
+  # ClickHouse
+  CLICKHOUSE_MIGRATION_URL: "clickhouse://langfuse-clickhouse:9000"
+  CLICKHOUSE_URL: "http://langfuse-clickhouse:8123"
+  CLICKHOUSE_USER: "default"
+  CLICKHOUSE_PASSWORD: "langfuse"
+  CLICKHOUSE_CLUSTER_ENABLED: "false"
+  # MinIO / S3
+  LANGFUSE_S3_MEDIA_UPLOAD_ENABLED: "true"
+  LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: "langfuse"
+  LANGFUSE_S3_MEDIA_UPLOAD_REGION: "us-east-1"
+  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: "http://langfuse-minio:9000"
+  LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: "minio-access-key"
+  LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: "minio-secret-key"
+  LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_ENABLED: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: "langfuse"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: "events/"
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: "us-east-1"
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: "http://langfuse-minio:9000"
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: "minio-access-key"
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: "minio-secret-key"
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  # Redis
+  REDIS_HOST: "langfuse-redis"
+  REDIS_PORT: "6379"
+  REDIS_AUTH: "langfuse-redis-password"
+
+services:
+  # -- 1. Langfuse Web UI -------------------------------------------------------
+  langfuse-web:
+    image: langfuse/langfuse:latest
+    container_name: langfuse_web
+    restart: unless-stopped
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      <<: *langfuse-env
+      LANGFUSE_WORKER_HOST: "langfuse-worker"
+      LANGFUSE_WORKER_PORT: "3030"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/public/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # -- 2. Langfuse Worker (ingestion / async jobs) ------------------------------
+  langfuse-worker:
+    image: langfuse/langfuse-worker:latest
+    container_name: langfuse_worker
+    restart: unless-stopped
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+    environment:
+      <<: *langfuse-env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3030/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # -- 3. PostgreSQL (metadata store) ------------------------------------------
+  langfuse-postgres:
+    image: postgres:16-alpine
+    container_name: langfuse_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # -- 4. ClickHouse (analytics / event store) ----------------------------------
+  langfuse-clickhouse:
+    image: clickhouse/clickhouse-server:24.12-alpine
+    container_name: langfuse_clickhouse
+    restart: unless-stopped
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: "default"
+      CLICKHOUSE_USER: "default"
+      CLICKHOUSE_PASSWORD: "langfuse"
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    ports:
+      - "8123:8123"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # -- 5. MinIO (S3-compatible blob store for media/events) ---------------------
+  langfuse-minio:
+    image: minio/minio:latest
+    container_name: langfuse_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "minio-access-key"
+      MINIO_ROOT_PASSWORD: "minio-secret-key"
+    volumes:
+      - langfuse_minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # -- 6. MinIO bucket initialiser (runs once then exits) ------------------------
+  langfuse-minio-init:
+    image: minio/mc:latest
+    container_name: langfuse_minio_init
+    depends_on:
+      langfuse-minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://langfuse-minio:9000 minio-access-key minio-secret-key &&
+        mc mb --ignore-existing local/langfuse &&
+        mc anonymous set download local/langfuse &&
+        echo 'MinIO bucket ready.'
+      "
+    restart: "no"
+
+  # -- 7. Redis (queue / cache) --------------------------------------------------
+  langfuse-redis:
+    image: redis:7-alpine
+    container_name: langfuse_redis
+    restart: unless-stopped
+    command: redis-server --requirepass langfuse-redis-password
+    volumes:
+      - langfuse_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "langfuse-redis-password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  langfuse_postgres_data:
+  langfuse_clickhouse_data:
+  langfuse_clickhouse_logs:
+  langfuse_minio_data:
+  langfuse_redis_data:
