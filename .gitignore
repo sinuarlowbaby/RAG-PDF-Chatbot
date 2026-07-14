@@ -165,7 +165,6 @@ cython_debug/
 .vscode/
 
 # Vector stores / Data
-
 chroma_db/
 faiss_index/
 *.pdf
@@ -175,6 +174,14 @@ faiss_index/
 
 # Mac OS X
 .DS_Store
+
+# Langfuse self-hosted data (docker volumes leak paths on Windows)
+langfuse_postgres_data/
+langfuse_clickhouse_data/
+langfuse_minio_data/
+
+# Docker compose override (local tweaks)
+docker-compose.override.yml
 
 #testing
 app/old_main.py

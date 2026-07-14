@@ -24,6 +24,8 @@ LLM Streaming Generation (Groq — Llama 3.3 70B)
 Streamed Answer (SSE)
 ```
 
+Traces for every step are sent to **Langfuse** via `@observe()` decorators.
+
 ## Project Structure
 
 ```
@@ -62,7 +64,7 @@ app/
 ### Prerequisites
 
 - Python 3.11+
-- Docker & Docker Compose (for Qdrant + Redis/Valkey)
+- Docker & Docker Compose
 
 ### 1. Clone and set up environment
 
@@ -73,13 +75,21 @@ cp .env.example .env
 # Edit .env and fill in your API keys
 ```
 
-### 2. Start infrastructure
+### 2. Start infrastructure (Qdrant + Valkey)
 
 ```bash
-docker-compose up vector-db valkey -d
+docker compose up vector-db valkey -d
 ```
 
-### 3. Install dependencies
+### 3. Start Langfuse (self-hosted observability UI)
+
+```bash
+docker compose -f docker-compose.langfuse.yml up -d
+```
+
+Open **http://localhost:3000** → sign up → create a project → copy the **Secret Key** and **Public Key** → paste into `.env`.
+
+### 4. Install dependencies
 
 ```bash
 python -m venv .venv
@@ -87,20 +97,22 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 4. Run the app
+### 5. Run the app
 
 ```bash
-cd app
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
+# From the project root
+python app/app.py
 ```
 
-Open **http://localhost:8000** for the chat UI or **http://localhost:8000/docs** for the Swagger API docs.
+Open **http://localhost:8000** for the chat UI or **http://localhost:8000/docs** for Swagger.
 
-### 5. Run with Docker (full stack)
+### 6. Run with Docker (full app stack)
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
+
+> Langfuse runs separately via `docker-compose.langfuse.yml`.
 
 ## API Endpoints
 
@@ -141,3 +153,18 @@ See [`.env.example`](.env.example) for all available variables. Key ones:
 | `REDIS_URL` | Redis/Valkey URL | `redis://localhost:6379` |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:8000` |
 | `QDRANT_COLLECTION_NAME` | Qdrant collection name | `global_rag_store` |
+| `LANGFUSE_SECRET_KEY` | Langfuse project secret key | — |
+| `LANGFUSE_PUBLIC_KEY` | Langfuse project public key | — |
+| `LANGFUSE_HOST` | Langfuse server URL | `http://localhost:3000` |
+
+## Observability
+
+All pipeline steps are traced with [Langfuse](https://langfuse.com) using the `@observe()` decorator. Traces include:
+
+- Multi-query generation
+- Hybrid retrieval & deduplication
+- Cross-encoder reranking
+- Context building
+- LLM generation
+
+To view traces, open the Langfuse UI at **http://localhost:3000** (self-hosted) or [cloud.langfuse.com](https://cloud.langfuse.com).
