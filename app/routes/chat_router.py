@@ -130,6 +130,8 @@ async def ask(request: Request, query: QueryRequest, x_session_id: str = Header(
                 redis_client=redis_client,
                 k=20,
                 temperature=query.temperature,
+                use_answer_cache=query.use_answer_cache,
+                use_multi_query_cache=query.use_multi_query_cache,
             )
             for chunk in response_generator:
                 yield f"data: {chunk}\n\n"
