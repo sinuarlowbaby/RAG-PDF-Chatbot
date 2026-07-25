@@ -6,7 +6,6 @@ import datetime
 import numpy as np
 import redis
 from sklearn.metrics.pairwise import cosine_similarity
-from langfuse.decorators import observe
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +22,6 @@ def _is_available(redis_client: redis.Redis) -> bool:
         return False
 
 
-@observe(name="Semantic_Cache_Match")
 def semantic_cache_match(
     redis_client: redis.Redis,
     user_query_embedding: list,

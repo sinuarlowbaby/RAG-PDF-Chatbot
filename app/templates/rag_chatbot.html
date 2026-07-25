@@ -558,6 +558,7 @@ window.onload = () => {
   
   renderFiles();
   updateUIState();
+  fetchCacheStats();
 
   if (currentSessionId && files.length > 0) {
     appendMessage('bot', `Welcome back! Restored session with your document(s). What would you like to ask? 🤖`);
@@ -985,6 +986,7 @@ async function sendMessage() {
     removeTyping();
     isStreaming = false;
     updateUIState();
+    fetchCacheStats();
   }
 }
 
@@ -1063,6 +1065,48 @@ function toggleContext() {
   showCtx = !showCtx;
   document.getElementById('contextToggle').classList.toggle('on', showCtx);
   document.getElementById('rightPanel').classList.toggle('hidden', !showCtx);
+}
+
+// ── Redis Cache Management ──────────────────────────────────────────────────
+async function fetchCacheStats() {
+  try {
+    const res = await fetch('/api/v1/cache/stats');
+    if (!res.ok) return;
+    const data = await res.json();
+    const badge = document.getElementById('redisKeyBadge');
+    const details = document.getElementById('redisDetails');
+    
+    if (badge && details) {
+      if (data.connected) {
+        badge.textContent = `${data.total_keys} cached`;
+        badge.style.background = '#dcfce7';
+        badge.style.color = '#047857';
+        details.textContent = `Answer: ${data.semantic_cache_count} | Multi-Query: ${data.multi_query_cache_count}`;
+      } else {
+        badge.textContent = 'Offline';
+        badge.style.background = '#fee2e2';
+        badge.style.color = '#b91c1c';
+        details.textContent = 'Redis offline';
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to fetch cache stats:', e);
+  }
+}
+
+async function clearRedisCache() {
+  try {
+    const res = await fetch('/api/v1/cache/clear', { method: 'DELETE' });
+    const data = await res.json();
+    if (data.cleared) {
+      appendMessage('bot', `🧹 Purged ${data.count} Redis cache key(s).`);
+      fetchCacheStats();
+    } else {
+      appendMessage('bot', `⚠️ Could not clear Redis cache: ${data.error || 'Unknown error'}`);
+    }
+  } catch (e) {
+    console.error('Failed to clear cache:', e);
+  }
 }
 </script>
 </body>
