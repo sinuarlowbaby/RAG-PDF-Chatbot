@@ -6,7 +6,6 @@ from datetime import datetime
 import os
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langfuse.decorators import observe
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 _MIN_PAGE_CHARS = 50
 
 
-@observe(name="Load_Documents")
 def load_documents(files: list[str]) -> list:
     """Load PDF files from disk into LangChain Document objects.
 
@@ -44,7 +42,6 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
-@observe(name="Doc_Chunker")
 def doc_chunker(raw_documents, session_id: str) -> list:
     # ── 1. Filter out pages that contain no usable text ──────────────────────
     # PyPDFLoader returns empty page_content for scanned / image-only pages.
