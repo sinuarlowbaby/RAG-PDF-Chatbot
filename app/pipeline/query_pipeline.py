@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import math
@@ -25,22 +26,50 @@ def query_pipeline(
     redis_client=None,
     k: int = 20,
     temperature: float = 0.7,
+    use_answer_cache: bool = True,
+    use_multi_query_cache: bool = True,
 ):
-    new_query = generate_queries(user_query)
+    # ── 1. Multi-Query Caching Logic ──────────────────────────────────────────
+    new_query = None
+    mq_cache_key = None
+
+    if redis_client is not None and use_multi_query_cache:
+        query_hash = hashlib.md5(user_query.strip().lower().encode("utf-8")).hexdigest()
+        mq_cache_key = f"multi_query_cache:{session_id}:{query_hash}"
+        cached_mq_raw = redis_client.get(mq_cache_key)
+        if cached_mq_raw:
+            try:
+                new_query = json.loads(cached_mq_raw)
+                logger.info(f"Multi-query cache HIT for query: {user_query!r}")
+            except Exception as e:
+                logger.warning(f"Failed to parse cached multi-query: {e}")
+
+    if not new_query:
+        logger.info("Generating multi-query variants from LLM")
+        new_query = generate_queries(user_query)
+        if redis_client is not None and use_multi_query_cache and mq_cache_key:
+            try:
+                redis_client.setex(mq_cache_key, 3600, json.dumps(new_query))
+                logger.info("Multi-query variants cached in Redis (TTL=1h)")
+            except Exception as e:
+                logger.warning(f"Failed to store multi-query cache: {e}")
+
     all_query = ". ".join(new_query)
     user_query_embeddings = embedding_model.embed_query(all_query)
 
-    # Semantic cache lookup — only if redis is available
-    if redis_client is not None:
+    # ── 2. Answer / Semantic Cache Lookup ─────────────────────────────────────
+    if redis_client is not None and use_answer_cache:
         cached_match = semantic_cache_match(redis_client, user_query_embeddings, session_id)
         if cached_match:
             cached_context, cached_chunks = cached_match
-            logger.info("Semantic cache hit — skipping retrieval")
+            logger.info("Semantic answer cache HIT — skipping retrieval")
+            yield "[CACHE_HIT]"
             yield f"[CONTEXT]: {json.dumps(cached_chunks)}"
             for chunk in llm_client(cached_context, user_query, temperature=temperature):
                 yield chunk
             return
 
+    yield "[CACHE_MISS]"
     all_docs = retrieve_hybrid_documents(hybrid_retriever, all_query)
     unique_docs = deduplication(all_docs, k=10)
     reranked_docs = rerank_documents(user_query, unique_docs, reranker=reranker_model)
@@ -62,12 +91,12 @@ def query_pipeline(
 
     logger.info("LLM response generated")
 
-    # Store result in semantic cache for future identical/similar queries
-    if redis_client is not None:
+    # Store result in semantic answer cache (only if enabled)
+    if redis_client is not None and use_answer_cache:
         saved = store_semantic_cache(
             redis_client, user_query, new_query, user_query_embeddings, retrieved_context, session_id, chunk_data
         )
         if saved:
-            logger.info("Semantic cache stored (TTL=1h)")
+            logger.info("Semantic answer cache stored (TTL=1h)")
         else:
-            logger.debug("Semantic cache not stored")
+            logger.debug("Semantic answer cache not stored")

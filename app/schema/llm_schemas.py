@@ -1,4 +1,4 @@
-from pydantic import BaseModel,Field
+from pydantic import BaseModel, Field
 
 class QueryRequest(BaseModel):
     question: str = Field(
@@ -13,6 +13,14 @@ class QueryRequest(BaseModel):
         ge=0.0,
         le=1.0,
         description="LLM temperature"
+    )
+    use_answer_cache: bool = Field(
+        True,
+        description="Enable/disable semantic answer cache"
+    )
+    use_multi_query_cache: bool = Field(
+        True,
+        description="Enable/disable multi-query expansion cache"
     )
 
 class HealthResponse(BaseModel):

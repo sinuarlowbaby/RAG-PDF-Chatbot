@@ -43,8 +43,18 @@ from schema.llm_schemas import HealthResponse
 setup_logging(settings)
 logger = logging.getLogger(__name__)
 
-# ── Set OpenAI key from centralised settings ──────────────────────────────────
-openai.api_key = settings.openai_api_key
+# ── Set environment variables from centralised settings ───────────────────────
+if settings.openai_api_key:
+    openai.api_key = settings.openai_api_key
+    os.environ["OPENAI_API_KEY"] = settings.openai_api_key
+if settings.groq_api_key:
+    os.environ["GROQ_API_KEY"] = settings.groq_api_key
+if settings.langfuse_secret_key:
+    os.environ["LANGFUSE_SECRET_KEY"] = settings.langfuse_secret_key
+if settings.langfuse_public_key:
+    os.environ["LANGFUSE_PUBLIC_KEY"] = settings.langfuse_public_key
+if settings.langfuse_host:
+    os.environ["LANGFUSE_HOST"] = settings.langfuse_host
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -78,6 +88,7 @@ async def lifespan(app: FastAPI):
         app.state.embedding_model = OpenAIEmbeddings(
             model=settings.embedding_model,
             chunk_size=settings.embedding_chunk_size,
+            api_key=settings.openai_api_key,
         )
 
         # ── Qdrant vector store wrapper ───────────────────────────────────────
