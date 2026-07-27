@@ -60,6 +60,14 @@ class MockQdrantClient:
 
 qdrant_client.QdrantClient = MockQdrantClient
 
+class MockRedisPipeline:
+    def hset(self, *args, **kwargs):
+        return self
+    def expire(self, *args, **kwargs):
+        return self
+    def execute(self, *args, **kwargs):
+        return [True, True]
+
 class MockRedis:
     def __init__(self, *args, **kwargs):
         pass
@@ -69,10 +77,20 @@ class MockRedis:
         return True
     def delete(self, *args, **kwargs):
         pass
+    def get(self, *args, **kwargs):
+        return None
     def set(self, *args, **kwargs):
         pass
     def setex(self, *args, **kwargs):
         pass
+    def hmget(self, *args, **kwargs):
+        return [None, None]
+    def hset(self, *args, **kwargs):
+        pass
+    def expire(self, *args, **kwargs):
+        pass
+    def pipeline(self, *args, **kwargs):
+        return MockRedisPipeline()
     def keys(self, *args, **kwargs):
         return []
     def scan_iter(self, match=None, count=None):

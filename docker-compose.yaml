@@ -30,14 +30,14 @@ services:
       retries: 5
       start_period: 5s
 
-  # 3. Redis Web Management GUI (Redis Commander)
+  # 3. Redis Web Management GUI (P3X Redis UI)
   redis-ui:
-    image: rediscommander/redis-commander:latest
-    container_name: redis_ui
-    environment:
-      - REDIS_HOSTS=local:valkey:6379
+    image: patrikx3/p3x-redis-ui:latest
+    container_name: p3x_redis_ui
+    volumes:
+      - p3x_settings:/settings
     ports:
-      - "8081:8081"
+      - "7843:7843"
     depends_on:
       valkey:
         condition: service_healthy
@@ -63,3 +63,4 @@ services:
 volumes:
   valkey_data:
   qdrant_data:
+  p3x_settings:
