@@ -1,12 +1,10 @@
 import logging
 
-from langfuse.decorators import observe
 from sentence_transformers import CrossEncoder
 
 logger = logging.getLogger(__name__)
 
 
-@observe(name="Rerank_Documents")
 def rerank_documents(user_query: str, unique_docs: list, reranker: CrossEncoder, top_n: int = 5) -> list:
     """Score and rerank document chunks using a cross-encoder model.
 

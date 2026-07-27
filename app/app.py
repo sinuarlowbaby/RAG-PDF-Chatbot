@@ -17,6 +17,23 @@ Responsibilities:
 # ── Standard library ─────────────────────────────────────────────────────────
 import logging
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# ── Load environment variables BEFORE importing third-party libraries ──────────
+_ROOT_DIR = Path(__file__).parent.parent
+load_dotenv(dotenv_path=_ROOT_DIR / ".env", override=True)
+
+# Ensure older Langchain SDKs still work with the new LANGSMITH prefix
+if os.environ.get("LANGSMITH_TRACING"):
+    os.environ["LANGCHAIN_TRACING_V2"] = os.environ.get("LANGSMITH_TRACING")
+if os.environ.get("LANGSMITH_ENDPOINT"):
+    os.environ["LANGCHAIN_ENDPOINT"] = os.environ.get("LANGSMITH_ENDPOINT")
+if os.environ.get("LANGSMITH_API_KEY"):
+    os.environ["LANGCHAIN_API_KEY"] = os.environ.get("LANGSMITH_API_KEY")
+if os.environ.get("LANGSMITH_PROJECT"):
+    os.environ["LANGCHAIN_PROJECT"] = os.environ.get("LANGSMITH_PROJECT")
+
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -33,8 +50,23 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 from sentence_transformers import CrossEncoder
 
+# ── Rate Limiting ────────────────────────────────────────────────────────────────
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from rate_limiter import limiter
+
 # ── Internal ─────────────────────────────────────────────────────────────────
 from config import settings, setup_logging
+
+# ── Set environment variables BEFORE importing internal modules ───────────────
+if settings.openai_api_key:
+    openai.api_key = settings.openai_api_key
+    os.environ["OPENAI_API_KEY"] = settings.openai_api_key
+if settings.groq_api_key:
+    os.environ["GROQ_API_KEY"] = settings.groq_api_key
+# LangSmith and LangChain variables are automatically loaded into os.environ by dotenv at the top of the file.
+
+# ── Import Routers AFTER setting os.environ ──────────────────────────────────
 from routes.chat_router import chat_router
 from routes.upload_router import upload_router
 from schema.llm_schemas import HealthResponse
@@ -42,19 +74,6 @@ from schema.llm_schemas import HealthResponse
 # ── Bootstrap logging first, before any logger is created ────────────────────
 setup_logging(settings)
 logger = logging.getLogger(__name__)
-
-# ── Set environment variables from centralised settings ───────────────────────
-if settings.openai_api_key:
-    openai.api_key = settings.openai_api_key
-    os.environ["OPENAI_API_KEY"] = settings.openai_api_key
-if settings.groq_api_key:
-    os.environ["GROQ_API_KEY"] = settings.groq_api_key
-if settings.langfuse_secret_key:
-    os.environ["LANGFUSE_SECRET_KEY"] = settings.langfuse_secret_key
-if settings.langfuse_public_key:
-    os.environ["LANGFUSE_PUBLIC_KEY"] = settings.langfuse_public_key
-if settings.langfuse_host:
-    os.environ["LANGFUSE_HOST"] = settings.langfuse_host
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -65,6 +84,9 @@ async def lifespan(app: FastAPI):
     """Initialise and tear down shared infrastructure resources."""
     logger.info("Starting RAG pipeline...")
     try:
+        # ── Rate limiting ──────────────────────────────────────────────────
+        app.state.limiter = limiter
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
         # ── Qdrant vector database ────────────────────────────────────────────
         app.state.qdrant_client = QdrantClient(url=settings.qdrant_url)
 

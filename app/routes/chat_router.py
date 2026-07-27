@@ -2,6 +2,7 @@ import logging
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from rate_limiter import limiter
 from langchain_core.documents import Document
 from qdrant_client.http import models
 
@@ -14,7 +15,6 @@ chat_router = APIRouter(prefix="/api/v1", tags=["Chat"])
 logger = logging.getLogger(__name__)
 
 COLLECTION_NAME = settings.qdrant_collection_name
-
 
 @chat_router.delete("/session/{session_id}")
 async def delete_session(session_id: str, request: Request):
@@ -88,8 +88,8 @@ def _scroll_all_session_docs(client, session_id: str) -> list[Document]:
     logger.info(f"Scrolled {len(doc_chunks)} chunks for session {session_id}")
     return doc_chunks
 
-
 @chat_router.post("/ask")
+@limiter.limit("5/minute")
 async def ask(request: Request, query: QueryRequest, x_session_id: str = Header(...)):
     if not request.app.state.redis.exists(f"session:{x_session_id}"):
         raise HTTPException(

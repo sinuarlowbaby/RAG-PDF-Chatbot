@@ -3,7 +3,7 @@ import json
 import logging
 import math
 
-from langfuse.decorators import observe
+from langsmith import traceable
 
 from llm import llm_client, generate_queries
 from retrieval.build_context import build_context
@@ -15,7 +15,7 @@ from utils.semantic_cache import semantic_cache_match, store_semantic_cache
 logger = logging.getLogger(__name__)
 
 
-@observe(name="RAG_Query_Pipeline")
+@traceable(name="RAG_Query_Pipeline")
 def query_pipeline(
     vector_store,
     user_query,
@@ -63,6 +63,7 @@ def query_pipeline(
         if cached_match:
             cached_context, cached_chunks = cached_match
             logger.info("Semantic answer cache HIT — skipping retrieval")
+            # Log cache hit metadata (you can use get_current_run_tree() if needed in future)
             yield "[CACHE_HIT]"
             yield f"[CONTEXT]: {json.dumps(cached_chunks)}"
             for chunk in llm_client(cached_context, user_query, temperature=temperature):
@@ -83,6 +84,9 @@ def query_pipeline(
             "score": round(norm_score, 4),
             "source": doc.metadata.get("file_name", "unknown"),
         })
+
+    # Log cache miss metadata (you can use get_current_run_tree() if needed in future)
+
     yield f"[CONTEXT]: {json.dumps(chunk_data)}"
 
     # Generate streaming response from LLM

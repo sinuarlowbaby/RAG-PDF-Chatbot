@@ -2,6 +2,7 @@ import uuid
 import logging
 from pathlib import Path
 
+from rate_limiter import limiter
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, UploadFile
 
 from config import settings
@@ -48,7 +49,8 @@ def _validate_and_save(file: UploadFile) -> Path:
 
 
 @upload_router.post("/upload")
-async def upload(req: Request, background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)):
+@limiter.limit("2/minute")
+async def upload(request: Request, background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="No files provided.")
 
@@ -58,14 +60,14 @@ async def upload(req: Request, background_tasks: BackgroundTasks, files: list[Up
         saved_files.append(str(path))
 
     session_id = str(uuid.uuid4())
-    client = req.app.state.qdrant_client
-    embedding_model = req.app.state.embedding_model
+    client = request.app.state.qdrant_client
+    embedding_model = request.app.state.embedding_model
 
     # Run ingestion in the background after the response is sent.
     # FastAPI BackgroundTasks — no external queue or worker process needed.
     # Pass redis_client so ingest_pipeline can expire the session if the PDF
     # has no extractable text (scanned/image-only), preventing an endless 202 loop.
-    redis_client = req.app.state.redis
+    redis_client = request.app.state.redis
     background_tasks.add_task(
         ingest_pipeline, client, embedding_model, saved_files, session_id, redis_client
     )
