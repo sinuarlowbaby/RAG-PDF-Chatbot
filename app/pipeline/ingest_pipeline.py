@@ -1,12 +1,12 @@
 import logging
-from langfuse.decorators import observe
+from langsmith import traceable
 from ingest import doc_chunker, load_documents
 from vector_store import vector_db
 
 logger = logging.getLogger(__name__)
 
 
-@observe(name="RAG_Ingest_Pipeline")
+@traceable(name="RAG_Ingest_Pipeline")
 def ingest_pipeline(client, embedding_model, saved_files, session_id, redis_client=None):
     # Load documents
     raw_documents = load_documents(saved_files)

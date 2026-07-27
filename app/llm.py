@@ -1,7 +1,6 @@
 import logging
 import json
 from groq import Groq
-from langfuse.decorators import observe
 
 from config import settings
 
@@ -35,7 +34,6 @@ RESPONSE STYLE:
 """
 
 
-@observe(name="LLM_Client")
 def llm_client(retrieved_context: str, user_query: str, temperature: float = 0.2):
     """Stream tokens from the LLM using the retrieved context as grounding.
 
@@ -53,20 +51,15 @@ user_query = {user_query}
 context = {retrieved_context}
 ------------------------------------------------------------------
 """
-    # Consume the full stream inside the @observe span so Langfuse
-    # captures real LLM latency (generator spans close on object creation,
-    # not on exhaustion — so we collect tokens here, then re-yield below).
     tokens = _llm_stream(user_prompt, temperature)
     yield from tokens
 
 
-@observe(name="LLM_Stream")
-def _llm_stream(user_prompt: str, temperature: float) -> list[str]:
-    """Fully consume the Groq streaming response and return all tokens.
+from langsmith import traceable
 
-    Keeping this in a separate @observe-decorated function ensures Langfuse
-    measures the actual end-to-end LLM time, not just the generator creation.
-    """
+@traceable(name="LLM_Generation", run_type="llm")
+def _llm_stream(user_prompt: str, temperature: float) -> list[str]:
+    """Fully consume the Groq streaming response and return all tokens."""
     response_generator = _groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -85,11 +78,6 @@ def _llm_stream(user_prompt: str, temperature: float) -> list[str]:
     return tokens
 
 
-
-
-
-
-@observe(name="Generate_Multiple_Queries")
 def generate_queries(user_query: str) -> list[str]:
     """Generate semantically diverse search queries from the user's original question.
 

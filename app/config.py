@@ -40,10 +40,10 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", description="OpenAI API key")
     groq_api_key: str = Field(default="", description="Groq API key (optional)")
 
-    # ── Langfuse Tracing ─────────────────────────────────────────────────────
-    langfuse_secret_key: str = Field(default="")
-    langfuse_public_key: str = Field(default="")
-    langfuse_host: str = Field(default="https://cloud.langfuse.com")
+    # ── LangSmith Tracing ────────────────────────────────────────────────────
+    langchain_tracing_v2: str = Field(default="false")
+    langchain_api_key: str = Field(default="")
+    langchain_project: str = Field(default="rag-pdf-chatbot")
 
     # ── Infrastructure ───────────────────────────────────────────────────────
     qdrant_url: str = Field(default="http://localhost:6333")

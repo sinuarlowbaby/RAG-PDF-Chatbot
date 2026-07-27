@@ -49,12 +49,12 @@ if settings.openai_api_key:
     os.environ["OPENAI_API_KEY"] = settings.openai_api_key
 if settings.groq_api_key:
     os.environ["GROQ_API_KEY"] = settings.groq_api_key
-if settings.langfuse_secret_key:
-    os.environ["LANGFUSE_SECRET_KEY"] = settings.langfuse_secret_key
-if settings.langfuse_public_key:
-    os.environ["LANGFUSE_PUBLIC_KEY"] = settings.langfuse_public_key
-if settings.langfuse_host:
-    os.environ["LANGFUSE_HOST"] = settings.langfuse_host
+if settings.langchain_tracing_v2:
+    os.environ["LANGCHAIN_TRACING_V2"] = settings.langchain_tracing_v2
+if settings.langchain_api_key:
+    os.environ["LANGCHAIN_API_KEY"] = settings.langchain_api_key
+if settings.langchain_project:
+    os.environ["LANGCHAIN_PROJECT"] = settings.langchain_project
 
 
 # ─────────────────────────────────────────────────────────────────────────────
