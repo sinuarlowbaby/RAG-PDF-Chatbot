@@ -1,5 +1,6 @@
 import logging
 import json
+from typing import Generator
 from groq import Groq
 
 from config import settings
@@ -58,8 +59,8 @@ context = {retrieved_context}
 from langsmith import traceable
 
 @traceable(name="LLM_Generation", run_type="llm")
-def _llm_stream(user_prompt: str, temperature: float) -> list[str]:
-    """Fully consume the Groq streaming response and return all tokens."""
+def _llm_stream(user_prompt: str, temperature: float) -> Generator[str, None, None]:
+    """Stream the Groq response directly to the client."""
     response_generator = _groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -70,14 +71,13 @@ def _llm_stream(user_prompt: str, temperature: float) -> list[str]:
         stream=True,
     )
 
-    tokens = []
     for chunk in response_generator:
         delta = chunk.choices[0].delta.content
         if delta:
-            tokens.append(delta)
-    return tokens
+            yield delta
 
 
+@traceable(name="Generate_Queries", run_type="llm")
 def generate_queries(user_query: str) -> list[str]:
     """Generate semantically diverse search queries from the user's original question.
 

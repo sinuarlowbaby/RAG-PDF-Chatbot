@@ -41,9 +41,10 @@ class Settings(BaseSettings):
     groq_api_key: str = Field(default="", description="Groq API key (optional)")
 
     # ── LangSmith Tracing ────────────────────────────────────────────────────
-    langchain_tracing_v2: str = Field(default="false")
-    langchain_api_key: str = Field(default="")
-    langchain_project: str = Field(default="rag-pdf-chatbot")
+    langsmith_tracing: str = Field(default="false")
+    langsmith_endpoint: str = Field(default="https://api.smith.langchain.com")
+    langsmith_api_key: str = Field(default="")
+    langsmith_project: str = Field(default="rag-pdf-chatbot")
 
     # ── Infrastructure ───────────────────────────────────────────────────────
     qdrant_url: str = Field(default="http://localhost:6333")
