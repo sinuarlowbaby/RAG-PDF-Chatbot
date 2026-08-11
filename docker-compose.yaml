@@ -46,6 +46,8 @@ services:
     build: .
     ports:
       - "8000:8000"
+    volumes:
+      - ./uploads:/app/app/uploads
     depends_on:
       valkey:
         condition: service_healthy
