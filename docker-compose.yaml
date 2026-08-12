@@ -47,7 +47,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./uploads:/app/app/uploads
+      - uploads_data:/app/app/uploads
     depends_on:
       valkey:
         condition: service_healthy
@@ -63,3 +63,4 @@ services:
 volumes:
   valkey_data:
   qdrant_data:
+  uploads_data:
