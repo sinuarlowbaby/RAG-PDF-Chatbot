@@ -1,10 +1,15 @@
 services:
+  # 1. Vector Database — Qdrant
   vector-db:
     image: qdrant/qdrant
     ports:
       - "127.0.0.1:6333:6333"   # ← Only localhost on EC2, NOT public
     volumes:
       - qdrant_data:/qdrant/storage
+    deploy:
+      resources:
+        limits:
+          memory: 200M
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333"]
@@ -12,13 +17,19 @@ services:
       timeout: 3s
       retries: 5
 
+  # 2. Cache / Semantic Cache — Valkey (Redis-compatible) with LRU memory cap
   valkey:
     image: valkey/valkey:latest
     container_name: valkey_db
+    command: ["valkey-server", "--maxmemory", "100mb", "--maxmemory-policy", "allkeys-lru"]
     ports:
       - "127.0.0.1:6379:6379"   # ← Only localhost on EC2, NOT public
     volumes:
       - valkey_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 100M
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
@@ -26,7 +37,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 3. Redis Web Management GUI (RedisInsight)
+  # 3. Redis Web Management GUI (RedisInsight) - Optional
   # redis-ui:
   #   image: redis/redisinsight:latest
   #   container_name: redis_insight
@@ -37,14 +48,17 @@ services:
   #       condition: service_healthy
   #   restart: unless-stopped
 
-  # 4. Python RAG Application
-
+  # 4. Python RAG Application (FastAPI + Gunicorn)
   app:
     build: .
     ports:
-      - "80:8000"      # or "8000:8000" — your choice
+      - "80:8000"
     volumes:
       - uploads_data:/app/app/uploads
+    deploy:
+      resources:
+        limits:
+          memory: 600M
     depends_on:
       valkey:
         condition: service_healthy
@@ -53,6 +67,7 @@ services:
     environment:
       - REDIS_URL=redis://valkey:6379
       - QDRANT_URL=http://vector-db:6333
+      - WEB_CONCURRENCY=1
     env_file:
       - .env
     restart: unless-stopped

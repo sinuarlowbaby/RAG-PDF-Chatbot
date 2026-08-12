@@ -89,7 +89,7 @@ def _scroll_all_session_docs(client, session_id: str) -> list[Document]:
     return doc_chunks
 
 @chat_router.post("/ask")
-@limiter.limit("5/minute")
+@limiter.limit(settings.rate_limit_ask)
 async def ask(request: Request, query: QueryRequest, x_session_id: str = Header(...)):
     if not request.app.state.redis.exists(f"session:{x_session_id}"):
         raise HTTPException(

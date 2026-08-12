@@ -49,7 +49,7 @@ def _validate_and_save(file: UploadFile) -> Path:
 
 
 @upload_router.post("/upload")
-@limiter.limit("2/minute")
+@limiter.limit(settings.rate_limit_upload)
 async def upload(request: Request, background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="No files provided.")
