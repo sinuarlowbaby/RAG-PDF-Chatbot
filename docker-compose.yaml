@@ -1,8 +1,8 @@
 services:
   vector-db:
     image: qdrant/qdrant
-    # REMOVE: ports:
-    # REMOVE:   - "6333:6333"
+    ports:
+      - "127.0.0.1:6333:6333"   # ← Only localhost on EC2, NOT public
     volumes:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
@@ -15,8 +15,8 @@ services:
   valkey:
     image: valkey/valkey:latest
     container_name: valkey_db
-    # REMOVE: ports:
-    # REMOVE:   - "6379:6379"
+    ports:
+      - "127.0.0.1:6379:6379"   # ← Only localhost on EC2, NOT public
     volumes:
       - valkey_data:/data
     restart: unless-stopped
