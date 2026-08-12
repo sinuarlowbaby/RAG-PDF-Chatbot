@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     upload_dir: Path = Field(default=_APP_DIR / "uploads")
     max_upload_size_mb: int = Field(default=50)
 
+    # ── Rate Limiting ────────────────────────────────────────────────────────
+    rate_limit_ask: str = Field(default="5/minute", description="Rate limit for /api/v1/ask endpoint")
+    rate_limit_upload: str = Field(default="2/minute", description="Rate limit for /api/v1/upload endpoint")
+
     # ── Server ───────────────────────────────────────────────────────────────
     host: str = Field(default="0.0.0.0")
     port: int = Field(default=8000)
