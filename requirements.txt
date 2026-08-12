@@ -2,6 +2,7 @@
 # ── Core framework ─────────────────────────────────────────────────────────────
 fastapi
 uvicorn[standard]
+gunicorn
 python-multipart
 slowapi
 

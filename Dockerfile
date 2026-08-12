@@ -10,12 +10,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set the working directory in the container
 WORKDIR /app
 
-# Install lightweight CPU-only PyTorch (~150MB instead of 2.5GB CUDA)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+# Install uv directly from PyPI (fast global CDN, avoids slow ghcr.io downloads)
+RUN pip install --no-cache-dir uv
+
+# Install lightweight CPU-only PyTorch using uv (~150MB instead of 2.5GB CUDA)
+RUN uv pip install --system --no-cache torch --index-url https://download.pytorch.org/whl/cpu
 
 # Install dependencies before copying source (better layer caching)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # Pre-download the HuggingFace CrossEncoder model so startup is instant and offline-ready
 ENV HF_HOME=/app/.cache/huggingface
@@ -36,5 +39,5 @@ EXPOSE 8000
 # Set the execution directory to the app folder
 WORKDIR /app/app
 
-# Run the application
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application with Gunicorn managing Uvicorn workers
+CMD ["gunicorn", "-c", "/app/gunicorn_conf.py", "app:app"]
