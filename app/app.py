@@ -17,11 +17,17 @@ Responsibilities:
 # ── Standard library ─────────────────────────────────────────────────────────
 import logging
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Ensure 'app' directory is always in sys.path so sibling imports work everywhere
+_APP_DIR = Path(__file__).resolve().parent
+_ROOT_DIR = _APP_DIR.parent
+if str(_APP_DIR) not in sys.path:
+    sys.path.insert(0, str(_APP_DIR))
+
 # ── Load environment variables BEFORE importing third-party libraries ──────────
-_ROOT_DIR = Path(__file__).parent.parent
 load_dotenv(dotenv_path=_ROOT_DIR / ".env", override=True)
 
 # Ensure older Langchain SDKs still work with the new LANGSMITH prefix
@@ -49,6 +55,8 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 from sentence_transformers import CrossEncoder
+import torch
+torch.set_num_threads(1)
 
 # ── Rate Limiting ────────────────────────────────────────────────────────────────
 from slowapi import _rate_limit_exceeded_handler

@@ -52,8 +52,9 @@ class Settings(BaseSettings):
     qdrant_collection_name: str = Field(default="global_rag_store")
 
     # ── CORS ─────────────────────────────────────────────────────────────────
-    # Stored as a raw comma-separated string in env; parsed into a list below.
-    allowed_origins: str = Field(default="http://localhost:8000")
+    allowed_origins: str = Field(
+        default="http://localhost:8000,http://localhost:8001,http://127.0.0.1:8000,http://127.0.0.1:8001,*"
+    )
 
     # ── Embedding model ──────────────────────────────────────────────────────
     embedding_model: str = Field(default="text-embedding-3-small")

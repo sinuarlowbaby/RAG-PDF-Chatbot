@@ -8,11 +8,11 @@ services:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333"]
+      interval: 5s
+      timeout: 3s
       retries: 5
-      start_period: 10s
+      start_period: 5s
 
   # 2. Cache / Task Queue Store — Valkey (Redis-compatible)
   valkey:
@@ -31,15 +31,15 @@ services:
       start_period: 5s
 
   # 3. Redis Web Management GUI (RedisInsight)
-  redis-ui:
-    image: redis/redisinsight:latest
-    container_name: redis_insight
-    ports:
-      - "5540:5540"
-    depends_on:
-      valkey:
-        condition: service_healthy
-    restart: unless-stopped
+  # redis-ui:
+  #   image: redis/redisinsight:latest
+  #   container_name: redis_insight
+  #   ports:
+  #     - "5540:5540"
+  #   depends_on:
+  #     valkey:
+  #       condition: service_healthy
+  #   restart: unless-stopped
 
   # 4. Python RAG Application
   app:

@@ -1,5 +1,5 @@
 import logging
-
+import torch
 from sentence_transformers import CrossEncoder
 
 logger = logging.getLogger(__name__)
@@ -17,8 +17,18 @@ def rerank_documents(user_query: str, unique_docs: list, reranker: CrossEncoder,
     Returns:
         List of (Document, score) tuples sorted by descending score.
     """
+    if not unique_docs:
+        return []
+
     pairs = [(user_query, doc.page_content) for doc in unique_docs]
-    scores = reranker.predict(pairs, batch_size=32, show_progress_bar=False, convert_to_numpy=True)
+
+    with torch.no_grad():
+        scores = reranker.predict(
+            pairs,
+            batch_size=16,
+            show_progress_bar=False,
+            convert_to_numpy=True,
+        )
 
     scored_docs = sorted(zip(unique_docs, scores), key=lambda x: x[1], reverse=True)
     reranked = list(scored_docs[:top_n])
