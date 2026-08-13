@@ -4,10 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>RAG PDF Chatbot</title>
+<!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
     --primary: #6366f1;
     --primary-hover: #4f46e5;
@@ -26,21 +27,12 @@
 
   body {
     font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
-    height: 100vh; display: flex; flex-direction: column;
     background: var(--bg-gradient);
-    color: #1e1b4b; overflow: hidden;
+    color: #1e1b4b;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ── HEADER ── */
-  header {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #0891b2 100%);
-    padding: 0 24px; height: 64px; display: flex; align-items: center;
-    justify-content: space-between; flex-shrink: 0;
-    box-shadow: 0 4px 20px rgba(79, 70, 229, 0.3);
-    z-index: 10;
-  }
-  .header-left { display: flex; align-items: center; gap: 12px; }
+  /* ── CUSTOM COMPONENTS ── */
   .bot-avatar {
     width: 38px; height: 38px; border-radius: 12px;
     background: rgba(255, 255, 255, 0.2);
@@ -52,8 +44,6 @@
   }
   .bot-avatar:hover { transform: rotate(8deg) scale(1.05); }
   .bot-avatar svg { stroke: #fff; }
-  .app-title { color: #fff; font-weight: 800; font-size: 18px; letter-spacing: -.3px; }
-  .app-sub { color: rgba(255, 255, 255, 0.8); font-size: 11px; font-weight: 500; }
 
   /* Status Badge */
   .status-badge {
@@ -63,45 +53,23 @@
     transition: all 0.3s ease;
     backdrop-filter: blur(8px);
   }
-  .status-badge.idle {
-    background: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.85);
-  }
-  .status-badge.ready {
-    background: rgba(34, 197, 94, 0.25);
-    color: #dcfce7;
-    border: 1px solid rgba(34, 197, 94, 0.4);
-  }
-  .status-badge.uploading {
-    background: rgba(245, 158, 11, 0.25);
-    color: #fef3c7;
-    border: 1px solid rgba(245, 158, 11, 0.4);
-  }
-  .status-badge.processing {
-    background: rgba(168, 85, 247, 0.25);
-    color: #f3e8ff;
-    border: 1px solid rgba(168, 85, 247, 0.4);
-  }
+  .status-badge.idle { background: rgba(255, 255, 255, 0.15); color: rgba(255, 255, 255, 0.85); }
+  .status-badge.ready { background: rgba(34, 197, 94, 0.25); color: #dcfce7; border: 1px solid rgba(34, 197, 94, 0.4); }
+  .status-badge.uploading { background: rgba(245, 158, 11, 0.25); color: #fef3c7; border: 1px solid rgba(245, 158, 11, 0.4); }
+  .status-badge.processing { background: rgba(168, 85, 247, 0.25); color: #f3e8ff; border: 1px solid rgba(168, 85, 247, 0.4); }
 
-  .status-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    display: inline-block;
-  }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
   .status-badge.idle .status-dot { background: rgba(255, 255, 255, 0.5); }
   .status-badge.ready .status-dot { background: #22c55e; box-shadow: 0 0 8px #22c55e; animation: pulseDot 2s infinite; }
   .status-badge.uploading .status-dot { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; animation: pulseDot 1s infinite; }
   .status-badge.processing .status-dot { background: #c084fc; box-shadow: 0 0 8px #c084fc; animation: pulseDot 1.2s infinite; }
 
-  .settings-bar { display: flex; align-items: center; gap: 16px; }
-  .setting-group { display: flex; align-items: center; gap: 8px; }
-  .setting-label { color: rgba(255,255,255,.9); font-size: 12px; font-weight: 600; white-space: nowrap; }
   .temp-val {
     background: rgba(255,255,255,.2); color: #fff;
     font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 7px;
     border: 1px solid rgba(255,255,255,0.2);
   }
   input[type=range] { width: 80px; accent-color: #fbbf24; cursor: pointer; }
-  .divider { width: 1px; height: 28px; background: rgba(255,255,255,.25); }
 
   /* Toggle Switch */
   .toggle-wrap { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
@@ -119,46 +87,26 @@
   }
   .toggle.on .toggle-knob { left: 19px; }
 
-  /* ── BODY ── */
-  .body { flex: 1; display: flex; overflow: hidden; padding: 16px; gap: 14px; }
-
-  /* ── LEFT PANEL ── */
-  .left-panel {
-    width: 230px; flex-shrink: 0;
+  /* ── PANELS ── */
+  .glass-panel {
     background: var(--panel-bg);
     backdrop-filter: blur(16px);
-    border-radius: var(--radius-lg); padding: 18px;
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--panel-border);
-    display: flex; flex-direction: column; gap: 14px;
   }
-  .panel-title {
-    font-weight: 800; font-size: 12px; color: #4f46e5;
-    letter-spacing: .5px; text-transform: uppercase;
-    display: flex; align-items: center; justify-content: space-between;
-  }
+  
   .upload-btn {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     color: #fff; border: none; border-radius: var(--radius-md);
     padding: 11px 14px; font-weight: 700; font-size: 13px;
-    cursor: pointer; box-shadow: 0 4px 14px rgba(99,102,241,.35);
-    transition: all .2s cubic-bezier(0.4, 0, 0.2, 1); font-family: inherit;
-    position: relative; overflow: hidden;
+    box-shadow: 0 4px 14px rgba(99,102,241,.35);
+    transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .upload-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(99,102,241,.5);
-  }
-  .upload-btn:active:not(:disabled) { transform: translateY(0); }
-  .upload-btn:disabled {
-    opacity: 0.75; cursor: not-allowed;
-    background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
-  }
+  .upload-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(99,102,241,.5); color: #fff;}
+  .upload-btn:disabled { opacity: 0.75; cursor: not-allowed; background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%); }
 
-  .file-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
   .file-item {
-    display: flex; align-items: center; gap: 8px;
     background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
     border-radius: var(--radius-md); padding: 10px 12px;
     border: 1px solid rgba(99,102,241,.15);
@@ -167,102 +115,71 @@
     transition: all 0.2s ease;
   }
   .file-item:hover { border-color: rgba(99,102,241,0.3); transform: translateX(2px); }
-  .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #334155; }
+  
   .file-del {
     background: none; border: none; cursor: pointer;
-    color: #94a3b8; display: flex; padding: 4px; border-radius: 6px; flex-shrink: 0;
+    color: #94a3b8; padding: 4px; border-radius: 6px;
     transition: all 0.2s ease;
   }
   .file-del:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
   .no-files-box {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 24px 12px; border: 2px dashed rgba(99,102,241,0.2); border-radius: var(--radius-md);
-    text-align: center; color: #94a3b8; gap: 8px; margin-top: 10px;
+    border: 2px dashed rgba(99,102,241,0.2); border-radius: var(--radius-md);
     background: rgba(248, 250, 252, 0.5);
   }
-  .no-files-icon { font-size: 24px; opacity: 0.7; }
-  .no-files-text { font-size: 12px; font-weight: 500; color: #64748b; }
 
   .clear-btn {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
     background: linear-gradient(135deg, #fff1f2, #fce7f3);
     color: #e11d48; border: 1px solid rgba(225,29,72,.2);
     border-radius: var(--radius-md); padding: 9px 12px; font-weight: 700;
-    font-size: 12px; cursor: pointer; transition: all .2s ease;
-    font-family: inherit;
+    font-size: 12px; transition: all .2s ease;
   }
   .clear-btn:hover { transform: translateY(-1px); background: #ffe4e6; border-color: rgba(225,29,72,.3); }
 
-  /* ── MAIN CHAT ── */
-  .chat-panel {
-    flex: 1; display: flex; flex-direction: column;
-    background: var(--panel-bg);
-    backdrop-filter: blur(16px);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--panel-border); overflow: hidden;
-  }
-  .messages {
-    flex: 1; overflow-y: auto; padding: 22px;
-    display: flex; flex-direction: column; gap: 16px;
-  }
-  .msg-row { display: flex; align-items: flex-end; gap: 10px; }
-  .msg-row.user { flex-direction: row-reverse; }
-
+  /* ── CHAT ── */
   .avatar {
     width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0;
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
     display: flex; align-items: center; justify-content: center;
     color: #fff; box-shadow: 0 4px 10px rgba(99,102,241,.3);
-    transition: all 0.3s ease;
   }
-  .avatar.cache-hit-avatar {
-    background: linear-gradient(135deg, #10b981, #059669) !important;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
-  }
+  .avatar.cache-hit-avatar { background: linear-gradient(135deg, #10b981, #059669) !important; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important; }
   .avatar svg { stroke: #fff; }
 
-  .bubble-wrap { max-width: 72%; }
+  .bubble-wrap { max-width: 85%; }
+  
+  @media (min-width: 768px) {
+    .bubble-wrap { max-width: 72%; }
+  }
 
-  /* Normal Bot Bubble (Cache Miss) */
   .bubble {
     border-radius: 18px 18px 18px 4px;
     padding: 13px 17px; font-size: 14px; line-height: 1.6;
-    background: #ffffff;
-    color: #1e293b;
+    background: #ffffff; color: #1e293b;
     box-shadow: 0 2px 12px rgba(0,0,0,.05);
     border: 1px solid rgba(99,102,241,.14);
-    transition: all 0.3s ease;
   }
   .bubble.user {
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     color: #fff; border-radius: 18px 18px 4px 18px; border: none;
     box-shadow: 0 4px 16px rgba(99,102,241,.3);
   }
-
-  /* Cache Hit Bubble (Distinct Emerald Color) */
   .bubble.cache-hit {
     background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
     border: 1.5px solid rgba(16, 185, 129, 0.4) !important;
     color: #064e3b !important;
     box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15) !important;
   }
+  
   .cache-badge {
-    display: inline-flex; align-items: center; gap: 4px;
     background: #10b981; color: #ffffff;
     font-size: 10px; font-weight: 700; border-radius: 12px;
     padding: 3px 9px; margin-bottom: 8px;
     box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
-    letter-spacing: 0.3px;
+    display: inline-flex;
   }
 
-  .msg-time { font-size: 10px; color: #94a3b8; margin-top: 5px; padding-inline: 4px; font-weight: 500; }
-  .msg-row.user .msg-time { text-align: right; }
-
-  /* Typing dots & status animation */
-  .typing-box { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
-  .typing-text { font-size: 12px; font-weight: 600; color: #6366f1; letter-spacing: 0.2px; }
-  .typing-dots { display: flex; gap: 5px; align-items: center; }
+  /* Typing dots */
   .dot {
     width: 7px; height: 7px; border-radius: 50%;
     background: #8b5cf6; opacity: .8;
@@ -271,151 +188,116 @@
   .dot:nth-child(2) { animation-delay: .2s; }
   .dot:nth-child(3) { animation-delay: .4s; }
 
-  /* Input bar */
-  .input-bar {
-    padding: 14px 20px; border-top: 1px solid rgba(99,102,241,.1);
-    background: rgba(248, 250, 252, 0.7); display: flex; gap: 12px; align-items: center;
-  }
   .chat-input {
-    flex: 1; border: 1.5px solid rgba(99,102,241,.2); border-radius: var(--radius-md);
+    border: 1.5px solid rgba(99,102,241,.2); border-radius: var(--radius-md);
     padding: 13px 18px; font-size: 14px; outline: none;
-    background: #fff; color: #0f172a; font-family: inherit;
-    transition: all 0.25s ease;
+    background: #fff; color: #0f172a; transition: all 0.25s ease;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
   }
-  .chat-input:focus {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
-  }
+  .chat-input:focus { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99,102,241,0.15); }
 
-  /* ── SEND BUTTON & DULL STATE ── */
   .send-btn {
     width: 48px; height: 48px; border-radius: var(--radius-md); border: none;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0;
-    box-shadow: 0 4px 14px rgba(99,102,241,.4);
+    color: #fff; cursor: pointer; box-shadow: 0 4px 14px rgba(99,102,241,.4);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative; overflow: hidden;
   }
-  .send-btn:not(:disabled):not(.dull):hover {
-    transform: translateY(-2px) scale(1.04);
-    box-shadow: 0 6px 20px rgba(99,102,241,.55);
-  }
-  .send-btn:not(:disabled):not(.dull):active {
-    transform: translateY(0) scale(0.98);
-  }
-  .send-btn svg {
-    stroke: #fff;
-    transition: transform 0.25s ease;
-  }
-  .send-btn:not(:disabled):not(.dull):hover svg {
-    transform: translateX(2px) translateY(-2px);
-  }
-
-  /* DULL / DISABLED STATE WHILE UPLOADING OR IDLE */
+  .send-btn:not(:disabled):not(.dull):hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 6px 20px rgba(99,102,241,.55); }
   .send-btn.dull, .send-btn:disabled {
-    opacity: 0.35;
-    background: #cbd5e1 !important;
-    box-shadow: none !important;
-    cursor: not-allowed !important;
-    transform: none !important;
-    pointer-events: none;
+    opacity: 0.35; background: #cbd5e1 !important; box-shadow: none !important; cursor: not-allowed !important; transform: none !important; pointer-events: none;
   }
-  .send-btn.dull svg, .send-btn:disabled svg {
-    stroke: #64748b !important;
-    transform: none !important;
-  }
+  .send-btn.dull svg, .send-btn:disabled svg { stroke: #64748b !important; }
 
-  /* ── RIGHT PANEL ── */
-  .right-panel {
-    width: 275px; flex-shrink: 0;
-    background: var(--panel-bg);
-    backdrop-filter: blur(16px);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--panel-border);
-    display: flex; flex-direction: column; overflow: hidden;
-    transition: all .35s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .right-panel.hidden { width: 0; opacity: 0; pointer-events: none; padding: 0; margin: 0; overflow: hidden; }
-
-  .ctx-header {
-    padding: 16px 18px; border-bottom: 1px solid rgba(99,102,241,.1);
-    background: linear-gradient(135deg, #eef2ff, #f5f3ff); flex-shrink: 0;
-  }
-  .ctx-title { font-weight: 800; font-size: 12px; color: #4f46e5; letter-spacing: .5px; text-transform: uppercase; }
-  .ctx-sub { font-size: 11px; color: #64748b; margin-top: 3px; font-weight: 500; }
-
-  .chunks { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-  .empty-ctx { text-align: center; padding: 40px 20px; color: #94a3b8; }
-  .empty-ctx .empty-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.8; }
-  .empty-ctx p { font-size: 13px; font-weight: 500; }
-
+  /* ── CONTEXT CHUNKS ── */
   .chunk-card {
     background: linear-gradient(135deg, #ffffff, #f8fafc);
     border: 1px solid rgba(99,102,241,.15);
     border-radius: var(--radius-md); padding: 12px 14px;
-    animation: fadeUp .4s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    transition: all 0.3s ease;
+    animation: fadeUp .4s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
   }
   .chunk-card.cache-hit-card {
     background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
     border-color: rgba(16, 185, 129, 0.3);
   }
-  .chunk-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .chunk-src { display: flex; align-items: center; gap: 6px; color: #7c3aed; font-size: 11px; font-weight: 700; }
-  .chunk-card.cache-hit-card .chunk-src { color: #059669; }
-  .chunk-text { font-size: 12px; color: #334155; line-height: 1.6; }
 
+  /* Animations */
+  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-7px); } }
+  @keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .fadeUp { animation: fadeUp .35s ease; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  .spinner { width: 13px; height: 13px; border: 2px solid rgba(99,102,241,.25); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  .spinner-white { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #ffffff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  
   /* Scrollbar */
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(99,102,241,.25); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,.4); }
 
-  /* Animations */
-  @keyframes bounce {
-    0%, 60%, 100% { transform: translateY(0); }
-    30%            { transform: translateY(-7px); }
+  /* Offcanvas panels: full drawer on mobile, inline on desktop */
+  .side-panel {
+    background: var(--panel-bg) !important;
+    backdrop-filter: blur(16px);
   }
-  @keyframes pulseDot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.2); }
+  @media (min-width: 992px) {
+    /* On desktop, show panels as normal inline flex children */
+    #leftPanel, #rightPanel {
+      position: relative !important;
+      transform: none !important;
+      visibility: visible !important;
+      z-index: auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      flex-shrink: 0;
+    }
+    #leftPanel {
+      width: 250px;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--panel-border);
+    }
+    #rightPanel {
+      width: 275px;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--panel-border);
+    }
+    #leftPanel .offcanvas-header,
+    #rightPanel .offcanvas-header {
+      display: none !important;
+    }
+    #leftPanel .offcanvas-body,
+    #rightPanel .offcanvas-body {
+      display: flex !important;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+    /* Hide the mobile backdrop on desktop */
+    .offcanvas-backdrop { display: none !important; }
   }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
+  @media (max-width: 991.98px) {
+    #leftPanel, #rightPanel {
+      border: 1px solid var(--panel-border);
+      box-shadow: var(--shadow-lg);
+    }
   }
-  .fadeUp { animation: fadeUp .35s ease; }
-
-  /* Spinners */
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spinner {
-    width: 13px; height: 13px; flex-shrink: 0;
-    border: 2px solid rgba(99,102,241,.25);
-    border-top-color: #6366f1;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  .spinner-white {
-    width: 14px; height: 14px; flex-shrink: 0;
-    border: 2px solid rgba(255,255,255,.3);
-    border-top-color: #ffffff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  .file-item.loading { opacity: 0.75; background: rgba(238, 242, 255, 0.7); }
-  .file-status { font-size: 11px; color: #7c3aed; font-weight: 600; margin-left: 2px; white-space: nowrap; }
 </style>
 </head>
-<body>
+<body class="d-flex flex-column vh-100 overflow-hidden">
 
 <!-- ══════════ HEADER ══════════ -->
-<header>
-  <div class="header-left">
-    <div class="bot-avatar">
+<header class="d-flex align-items-center justify-content-between px-3 px-md-4 py-2 flex-shrink-0" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #0891b2 100%); box-shadow: 0 4px 20px rgba(79, 70, 229, 0.3); z-index: 10; height: 64px;">
+  
+  <div class="d-flex align-items-center gap-2 gap-md-3">
+    <!-- Mobile Document Toggle -->
+    <button class="btn btn-sm btn-outline-light d-lg-none border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#leftPanel" aria-controls="leftPanel">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+
+    <div class="bot-avatar d-none d-sm-flex">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
         <rect x="3" y="11" width="18" height="10" rx="2"/>
         <circle cx="12" cy="5" r="2"/>
@@ -424,126 +306,166 @@
         <line x1="16" y1="16" x2="16" y2="16" stroke-linecap="round" stroke-width="3"/>
       </svg>
     </div>
-    <div>
-      <div class="app-title">RAG Chatbot</div>
-      <div class="app-sub">Retrieval-Augmented Generation</div>
+    
+    <div class="d-flex flex-column text-white">
+      <div class="fw-bold" style="font-size: 16px; letter-spacing: -.3px; line-height: 1.2;">RAG Chatbot</div>
+      <div class="d-none d-md-block opacity-75 fw-medium" style="font-size: 11px;">Retrieval-Augmented Generation</div>
     </div>
     
     <!-- Status Pill -->
-    <div class="status-badge idle" id="statusBadge" style="margin-left: 12px;">
+    <div class="status-badge idle ms-1 ms-md-3" id="statusBadge">
       <span class="status-dot"></span>
       <span id="statusText">No Document</span>
     </div>
   </div>
 
-  <div class="settings-bar">
-    <!-- Temperature -->
-    <div class="setting-group">
-      <span class="setting-label">🌡️ Temp</span>
-      <input type="range" id="tempSlider" min="0" max="1" step="0.05" value="0.2" oninput="updateTemp(this.value)"/>
-      <span class="temp-val" id="tempVal">0.20</span>
+  <div class="d-flex align-items-center gap-2 gap-md-3">
+    <!-- Temperature (Hide on very small screens) -->
+    <div class="d-none d-md-flex align-items-center gap-2">
+      <span class="text-white-50 fw-semibold" style="font-size: 12px; white-space: nowrap;">🌡️ Temp</span>
+      <input type="range" class="temp-slider-input" min="0" max="1" step="0.05" value="0.2" oninput="updateTemp(this.value)"/>
+      <span class="temp-val temp-val-display">0.20</span>
     </div>
 
-    <div class="divider"></div>
+    <div class="vr bg-white opacity-25 d-none d-md-block" style="width: 1px; height: 28px;"></div>
 
     <!-- Answer Cache Toggle -->
-    <div class="toggle-wrap" onclick="toggleAnswerCache()" title="Toggle semantic answer caching ON/OFF">
-      <div class="toggle on" id="answerCacheToggle"><div class="toggle-knob"></div></div>
-      <span class="setting-label">Answer Cache</span>
+    <div class="toggle-wrap d-none d-md-flex" onclick="toggleAnswerCache()" title="Toggle semantic answer caching ON/OFF">
+      <div class="toggle on answer-cache-toggle"><div class="toggle-knob"></div></div>
+      <span class="text-white-50 fw-semibold" style="font-size: 12px; white-space: nowrap;">Answer Cache</span>
     </div>
 
-    <div class="divider"></div>
+    <div class="vr bg-white opacity-25 d-none d-xl-block" style="width: 1px; height: 28px;"></div>
 
     <!-- Multi-Query Cache Toggle -->
-    <div class="toggle-wrap" onclick="toggleMQCache()" title="Toggle multi-query expansion caching ON/OFF">
-      <div class="toggle on" id="mqCacheToggle"><div class="toggle-knob"></div></div>
-      <span class="setting-label">Multi-Query Cache</span>
+    <div class="toggle-wrap d-none d-xl-flex" onclick="toggleMQCache()" title="Toggle multi-query expansion caching ON/OFF">
+      <div class="toggle on mq-cache-toggle"><div class="toggle-knob"></div></div>
+      <span class="text-white-50 fw-semibold" style="font-size: 12px; white-space: nowrap;">MQ Cache</span>
     </div>
 
-    <div class="divider"></div>
+    <!-- Mobile Settings Toggle -->
+    <button class="btn btn-sm btn-outline-light d-md-none border-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#mobileSettings" aria-expanded="false" aria-controls="mobileSettings">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
 
-    <!-- Context Toggle -->
-    <div class="toggle-wrap" onclick="toggleContext()">
-      <div class="toggle on" id="contextToggle"><div class="toggle-knob"></div></div>
-      <span class="setting-label">Context</span>
-    </div>
+    <!-- Mobile Context Toggle -->
+    <button class="btn btn-sm btn-outline-light d-lg-none border-0 ms-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#rightPanel" aria-controls="rightPanel">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+    </button>
   </div>
 </header>
 
+<!-- Mobile Settings Collapse Panel -->
+<div class="collapse d-md-none position-absolute w-100 z-3" id="mobileSettings" style="top: 64px; left: 0;">
+  <div class="bg-white p-3 border-bottom d-flex flex-column gap-3 shadow-sm">
+    <div class="d-flex align-items-center justify-content-between">
+      <span class="text-secondary fw-semibold" style="font-size: 13px;">🌡️ Temperature</span>
+      <div class="d-flex align-items-center gap-2">
+        <input type="range" class="temp-slider-input" min="0" max="1" step="0.05" value="0.2" oninput="updateTemp(this.value)" style="width: 100px;"/>
+        <span class="temp-val temp-val-display bg-secondary text-white px-2 py-1 rounded" style="font-size: 11px;">0.20</span>
+      </div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between">
+      <span class="text-secondary fw-semibold" style="font-size: 13px;">Answer Cache</span>
+      <div class="toggle-wrap" onclick="toggleAnswerCache()">
+        <div class="toggle on answer-cache-toggle"><div class="toggle-knob"></div></div>
+      </div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between">
+      <span class="text-secondary fw-semibold" style="font-size: 13px;">Multi-Query Cache</span>
+      <div class="toggle-wrap" onclick="toggleMQCache()">
+        <div class="toggle on mq-cache-toggle"><div class="toggle-knob"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ BODY ══════════ -->
-<div class="body">
+<div class="flex-grow-1 d-flex overflow-hidden p-2 p-md-3 gap-3 position-relative">
 
   <!-- LEFT PANEL -->
-  <aside class="left-panel">
-    <div class="panel-title">
-      <span>📁 Documents</span>
+  <aside class="offcanvas offcanvas-start side-panel" tabindex="-1" id="leftPanel" aria-labelledby="leftPanelLabel">
+    <div class="offcanvas-header border-bottom border-light py-3">
+      <h5 class="offcanvas-title fw-bold" id="leftPanelLabel" style="color: #4f46e5; font-size: 14px; text-transform: uppercase;">📁 Documents</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
+    <div class="offcanvas-body d-flex flex-column p-3 gap-3 overflow-hidden">
 
-    <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/>
-      </svg>
-      <span>Upload PDF</span>
-    </button>
-    <input type="file" id="fileInput" accept=".pdf" multiple hidden onchange="handleUpload(this)"/>
+      <button class="upload-btn d-flex align-items-center justify-content-center gap-2 w-100" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Upload PDF</span>
+      </button>
+      <input type="file" id="fileInput" accept=".pdf" multiple hidden onchange="handleUpload(this)"/>
 
-    <div class="file-list" id="fileList">
-      <!-- populated by JS -->
+      <div class="flex-grow-1 overflow-auto d-flex flex-column gap-2 pe-1" id="fileList">
+        <!-- populated by JS -->
+      </div>
+
+      <button class="clear-btn d-flex align-items-center justify-content-center gap-2 w-100 mt-auto" onclick="clearFiles()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/>
+          <path d="M10,11v6"/><path d="M14,11v6"/><path d="M9,6V4h6v2"/>
+        </svg>
+        Clear Documents
+      </button>
     </div>
-
-    <button class="clear-btn" onclick="clearFiles()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/>
-        <path d="M10,11v6"/><path d="M14,11v6"/><path d="M9,6V4h6v2"/>
-      </svg>
-      Clear Documents
-    </button>
   </aside>
 
   <!-- MAIN CHAT -->
-  <main class="chat-panel">
-    <div class="messages" id="messages">
+  <main class="flex-grow-1 d-flex flex-column glass-panel overflow-hidden position-relative">
+    <div class="flex-grow-1 overflow-auto p-3 p-md-4 d-flex flex-column gap-3" id="messages">
       <!-- populated by JS -->
     </div>
-    <div class="input-bar">
-      <input class="chat-input" id="chatInput" type="text"
-        placeholder="Upload a PDF document on the left to start chatting…"
-        onkeydown="if(event.key==='Enter' && !this.disabled) sendMessage()"/>
-      
-      <!-- Send Button: starts dull/disabled until PDF upload completes -->
-      <button class="send-btn dull" id="sendBtn" onclick="sendMessage()" disabled title="Please upload a PDF document first">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2.5">
-          <line x1="22" y1="2" x2="11" y2="13"/>
-          <polygon points="22,2 15,22 11,13 2,9"/>
-        </svg>
-      </button>
+    
+    <div class="p-3 border-top" style="background: rgba(248, 250, 252, 0.7); border-color: rgba(99,102,241,.1) !important;">
+      <div class="d-flex gap-2 align-items-center">
+        <input class="chat-input flex-grow-1" id="chatInput" type="text"
+          placeholder="Upload a PDF document on the left to start chatting…"
+          onkeydown="if(event.key==='Enter' && !this.disabled) sendMessage()"/>
+        
+        <button class="send-btn dull d-flex align-items-center justify-content-center" id="sendBtn" onclick="sendMessage()" disabled title="Please upload a PDF document first">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22,2 15,22 11,13 2,9"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </main>
 
-  <!-- RIGHT PANEL -->
-  <aside class="right-panel" id="rightPanel">
-    <div class="ctx-header">
-      <div class="ctx-title">🔍 Retrieved Context</div>
-      <div class="ctx-sub" id="ctxSub">Reranker active · 0 chunks</div>
+  <!-- RIGHT PANEL (Context) -->
+  <aside class="offcanvas offcanvas-end side-panel" tabindex="-1" id="rightPanel" aria-labelledby="rightPanelLabel">
+    <div class="offcanvas-header border-bottom py-3" style="background: linear-gradient(135deg, #eef2ff, #f5f3ff);">
+      <div>
+        <h5 class="offcanvas-title fw-bold mb-0" id="rightPanelLabel" style="font-size: 12px; color: #4f46e5; letter-spacing: .5px; text-transform: uppercase;">🔍 Retrieved Context</h5>
+        <div class="mt-1" style="font-size: 11px; color: #64748b; font-weight: 500;" id="ctxSub">Reranker active · 0 chunks</div>
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
-    <div class="chunks" id="chunks">
-      <div class="empty-ctx">
-        <div class="empty-icon">📭</div>
-        <p>Ask a question to see retrieved chunks here</p>
+    <div class="offcanvas-body p-0 d-flex flex-column" id="ctxSubMobile">
+      <div class="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-3" id="chunks">
+        <div class="text-center p-4" style="color: #94a3b8;">
+          <div style="font-size: 36px; margin-bottom: 10px; opacity: 0.8;">📭</div>
+          <p style="font-size: 13px; font-weight: 500;">Ask a question to see retrieved chunks here</p>
+        </div>
       </div>
     </div>
   </aside>
 
 </div>
 
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 let files          = [];
-let loadingFiles   = new Set(); // tracks filenames currently being uploaded
+let loadingFiles   = new Set();
 let reranker       = true;
 let showCtx        = true;
-let msgCount       = 0;
 let currentSessionId = null;
 let isStreaming    = false;
 let enableAnswerCache = true;
@@ -578,197 +500,146 @@ function updateUIState() {
   const isUploading = loadingFiles.size > 0;
   const hasFiles = files.length > 0 && currentSessionId !== null;
 
-  // 1. Upload Button State
   if (uploadBtn) {
     if (isUploading) {
       uploadBtn.disabled = true;
-      uploadBtn.innerHTML = `
-        <div class="spinner-white"></div>
-        <span>Uploading...</span>
-      `;
+      uploadBtn.innerHTML = `<div class="spinner-white"></div><span>Uploading...</span>`;
     } else {
       uploadBtn.disabled = false;
       uploadBtn.innerHTML = `
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <span>Upload PDF</span>
-      `;
+        </svg><span>Upload PDF</span>`;
     }
   }
 
-  // 2. Header Status Badge
   if (statusBadge && statusText) {
     if (isUploading) {
-      statusBadge.className = 'status-badge uploading';
+      statusBadge.className = 'status-badge uploading ms-1 ms-md-3';
       statusText.textContent = 'Uploading PDF...';
     } else if (isStreaming) {
-      statusBadge.className = 'status-badge processing';
-      statusText.textContent = 'Generating Answer...';
+      statusBadge.className = 'status-badge processing ms-1 ms-md-3';
+      statusText.textContent = 'Generating...';
     } else if (hasFiles) {
-      statusBadge.className = 'status-badge ready';
-      statusText.textContent = 'Document Ready';
+      statusBadge.className = 'status-badge ready ms-1 ms-md-3';
+      statusText.textContent = 'Ready';
     } else {
-      statusBadge.className = 'status-badge idle';
+      statusBadge.className = 'status-badge idle ms-1 ms-md-3';
       statusText.textContent = 'No Document';
     }
   }
 
-  // 3. Send Button & Input Field State (Dull during uploading / no doc, Visible after upload)
   if (sendBtn && chatInput) {
     if (isUploading) {
-      sendBtn.disabled = true;
-      sendBtn.classList.add('dull');
-      sendBtn.setAttribute('title', 'Uploading PDF... Please wait');
-      chatInput.placeholder = 'Uploading PDF... Please wait a moment.';
+      sendBtn.disabled = true; sendBtn.classList.add('dull');
+      sendBtn.setAttribute('title', 'Uploading PDF...');
+      chatInput.placeholder = 'Uploading PDF... Please wait.';
       chatInput.disabled = true;
     } else if (isStreaming) {
-      sendBtn.disabled = true;
-      sendBtn.classList.add('dull');
+      sendBtn.disabled = true; sendBtn.classList.add('dull');
       sendBtn.setAttribute('title', 'Generating response...');
       chatInput.disabled = true;
     } else if (!hasFiles) {
-      sendBtn.disabled = true;
-      sendBtn.classList.add('dull');
-      sendBtn.setAttribute('title', 'Upload a PDF document first to activate chat');
-      chatInput.placeholder = 'Upload a PDF document on the left to start chatting…';
+      sendBtn.disabled = true; sendBtn.classList.add('dull');
+      sendBtn.setAttribute('title', 'Upload a PDF first');
+      chatInput.placeholder = 'Upload a PDF on the left to start chatting…';
       chatInput.disabled = false;
     } else {
-      sendBtn.disabled = false;
-      sendBtn.classList.remove('dull');
-      sendBtn.setAttribute('title', 'Send message (Enter)');
-      chatInput.placeholder = 'Ask a question about your documents…';
+      sendBtn.disabled = false; sendBtn.classList.remove('dull');
+      sendBtn.setAttribute('title', 'Send (Enter)');
+      chatInput.placeholder = 'Ask a question…';
       chatInput.disabled = false;
     }
   }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function now() {
-  return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-}
-
-function scoreColor(s) {
-  if (s >= .9) return '#10b981';
-  if (s >= .8) return '#f59e0b';
-  return '#f87171';
-}
+function now() { return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
 
 // ── Files Upload Logic ──────────────────────────────────────────────────────
 async function handleUpload(input) {
   if (!input.files.length) return;
-
   const newFileNames = Array.from(input.files).map(f => f.name);
 
-  // ── Step 1: Purge previous session's data from Qdrant before uploading new files
   if (currentSessionId) {
-    try {
-      await fetch(`/api/v1/session/${currentSessionId}`, { method: 'DELETE' });
-    } catch (e) {
-      console.warn('Could not delete old session vectors:', e);
-    }
-    currentSessionId = null;
-    localStorage.removeItem('rag_session_id');
+    try { await fetch(`/api/v1/session/${currentSessionId}`, { method: 'DELETE' }); } catch (e) {}
+    currentSessionId = null; localStorage.removeItem('rag_session_id');
   }
 
-  // ── Step 2: Set uploading state & render dull send button immediately
   files = [...newFileNames];
   newFileNames.forEach(name => loadingFiles.add(name));
   localStorage.setItem('rag_files', JSON.stringify(files));
   
-  renderFiles();
-  updateUIState();
+  renderFiles(); updateUIState();
 
-  // ── Step 3: Upload request
   const formData = new FormData();
   Array.from(input.files).forEach(f => formData.append('files', f));
 
   try {
-    const response = await fetch('/api/v1/upload', {
-      method: 'POST',
-      body: formData
-    });
-
+    const response = await fetch('/api/v1/upload', { method: 'POST', body: formData });
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
       throw new Error(errData.detail ? JSON.stringify(errData.detail) : `HTTP ${response.status}`);
     }
-
     const data = await response.json();
     currentSessionId = data.session_id;
     localStorage.setItem('rag_session_id', currentSessionId);
-    localStorage.setItem('rag_files', JSON.stringify(files));
-
-    appendMessage('bot', `✅ Successfully uploaded ${data.documents} document(s). Document is ready — ask your question!`);
+    appendMessage('bot', `✅ Successfully uploaded ${data.documents} document(s). Ask your question!`);
+    
+    // Close mobile offcanvas if open
+    const leftPanel = document.getElementById('leftPanel');
+    const bsOffcanvas = bootstrap.Offcanvas.getInstance(leftPanel);
+    if(bsOffcanvas) bsOffcanvas.hide();
 
   } catch (error) {
-    console.error('Upload failed:', error);
-    files = [];
-    currentSessionId = null;
-    localStorage.removeItem('rag_files');
-    localStorage.removeItem('rag_session_id');
-    appendMessage('bot', `⚠️ Sorry, upload failed. ${error.message}`);
+    files = []; currentSessionId = null;
+    localStorage.removeItem('rag_files'); localStorage.removeItem('rag_session_id');
+    appendMessage('bot', `⚠️ Upload failed. ${error.message}`);
   } finally {
     newFileNames.forEach(name => loadingFiles.delete(name));
-    renderFiles();
-    updateUIState();
-    input.value = '';
+    renderFiles(); updateUIState(); input.value = '';
   }
 }
 
 function clearFiles() { 
-    files = []; 
-    currentSessionId = null; 
-    localStorage.removeItem("rag_files");
-    localStorage.removeItem("rag_session_id");
-    renderFiles(); 
-    updateUIState();
+    files = []; currentSessionId = null; 
+    localStorage.removeItem("rag_files"); localStorage.removeItem("rag_session_id");
+    renderFiles(); updateUIState();
 }
 
 function deleteFile(idx) {
     files.splice(idx, 1);
     localStorage.setItem('rag_files', JSON.stringify(files));
     if (files.length === 0) {
-      if (currentSessionId) {
-        fetch(`/api/v1/session/${currentSessionId}`, { method: 'DELETE' })
-          .catch(e => console.warn('Could not delete session vectors:', e));
-      }
-      currentSessionId = null;
-      localStorage.removeItem('rag_session_id');
+      if (currentSessionId) fetch(`/api/v1/session/${currentSessionId}`, { method: 'DELETE' }).catch(e=>e);
+      currentSessionId = null; localStorage.removeItem('rag_session_id');
     }
-    renderFiles();
-    updateUIState();
+    renderFiles(); updateUIState();
 }
 
 function renderFiles() {
   const el = document.getElementById('fileList');
   if (!files.length) {
     el.innerHTML = `
-      <div class="no-files-box">
-        <div class="no-files-icon">📄</div>
-        <div class="no-files-text">No documents uploaded</div>
+      <div class="no-files-box d-flex flex-column align-items-center justify-content-center p-4 text-center text-secondary gap-2 h-100">
+        <div style="font-size: 24px; opacity: 0.7;">📄</div>
+        <div style="font-size: 12px; font-weight: 500;">No documents uploaded</div>
       </div>`;
     return;
   }
   el.innerHTML = files.map((f, i) => {
     const isLoading = loadingFiles.has(f);
     return `
-    <div class="file-item${isLoading ? ' loading' : ''}">
+    <div class="file-item d-flex align-items-center gap-2 ${isLoading ? 'opacity-75' : ''}">
       ${isLoading
-        ? `<div class="spinner"></div><span class="file-status">Uploading…</span>`
-        : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14,2 14,8 20,8"/>
-           </svg>`
+        ? `<div class="spinner"></div>`
+        : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" class="flex-shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>`
       }
-      <span class="file-name" title="${f}">${f}</span>
+      <span class="text-truncate flex-grow-1" title="${f}">${f}</span>
       ${!isLoading ? `
-      <button class="file-del" onclick="deleteFile(${i})" title="Remove document">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/>
-          <path d="M10,11v6"/><path d="M14,11v6"/>
-        </svg>
+      <button class="file-del flex-shrink-0" onclick="deleteFile(${i})" title="Remove">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/><path d="M10,11v6"/><path d="M14,11v6"/></svg>
       </button>` : ''}
     </div>`;
   }).join('');
@@ -778,24 +649,20 @@ function renderFiles() {
 function appendMessage(role, text) {
   const msgs = document.getElementById('messages');
   const isUser = role === 'user';
-
+  
   const row = document.createElement('div');
-  row.className = `msg-row fadeUp ${isUser ? 'user' : ''}`;
+  row.className = `d-flex align-items-end gap-2 fadeUp ${isUser ? 'flex-row-reverse' : ''}`;
 
   const avatar = isUser ? '' : `
     <div class="avatar">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2">
-        <rect x="3" y="11" width="18" height="10" rx="2"/>
-        <circle cx="12" cy="5" r="2"/>
-        <path d="M12 7v4"/>
-      </svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
     </div>`;
 
   row.innerHTML = `
     ${avatar}
     <div class="bubble-wrap">
       <div class="bubble ${isUser ? 'user' : ''}">${text}</div>
-      <div class="msg-time">${now()}</div>
+      <div class="mt-1 px-1 fw-medium" style="font-size: 10px; color: #94a3b8; text-align: ${isUser?'right':'left'};">${now()}</div>
     </div>`;
 
   msgs.appendChild(row);
@@ -803,25 +670,21 @@ function appendMessage(role, text) {
 }
 
 function showTyping() {
-  removeTyping(); // Clean up existing typing animation before starting a new one
+  removeTyping();
   const msgs = document.getElementById('messages');
   const row = document.createElement('div');
-  row.className = 'msg-row fadeUp';
+  row.className = 'd-flex align-items-end gap-2 fadeUp';
   row.id = 'typingRow';
   row.innerHTML = `
     <div class="avatar">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-        <rect x="3" y="11" width="18" height="10" rx="2"/>
-        <circle cx="12" cy="5" r="2"/>
-        <path d="M12 7v4"/>
-      </svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
     </div>
-    <div class="bubble">
-      <div class="typing-box">
-        <div class="typing-dots">
+    <div class="bubble p-2 px-3">
+      <div class="d-flex align-items-center gap-2">
+        <div class="d-flex gap-1 align-items-center">
           <div class="dot"></div><div class="dot"></div><div class="dot"></div>
         </div>
-        <span class="typing-text">Thinking & searching context…</span>
+        <span class="fw-semibold" style="font-size: 12px; color: #6366f1;">Thinking…</span>
       </div>
     </div>`;
   msgs.appendChild(row);
@@ -839,34 +702,24 @@ async function sendMessage() {
   if (!text || isStreaming) return;
 
   if (!currentSessionId) {
-    appendMessage('bot', "⚠️ Please upload a PDF document first so I have something to search!");
+    appendMessage('bot', "⚠️ Please upload a PDF document first!");
     return;
   }
 
   appendMessage('user', text);
-  input.value = '';
-  isStreaming = true;
-  updateUIState();
-  showTyping(); // Typing animation starts & stays visible
-  clearChunks();
+  input.value = ''; isStreaming = true; updateUIState();
+  showTyping(); clearChunks();
 
-  let isCacheHit = false;
-  let createdBubble = false;
-  let bubble = null;
+  let isCacheHit = false; let createdBubble = false; let bubble = null;
   let msgs = document.getElementById('messages');
 
   function ensureBotBubble() {
     if (createdBubble) return;
-    removeTyping(); // Safely remove typing animation only when streaming response text arrives!
-    createdBubble = true;
+    removeTyping(); createdBubble = true;
 
     const row = document.createElement('div');
-    row.className = 'msg-row fadeUp';
-    
-    // Distinct badge for cache hit
-    const badgeHtml = isCacheHit 
-      ? `<div class="cache-badge">⚡ Semantic Cache Hit</div>` 
-      : ``;
+    row.className = 'd-flex align-items-end gap-2 fadeUp';
+    const badgeHtml = isCacheHit ? `<div class="cache-badge">⚡ Semantic Cache Hit</div>` : ``;
 
     row.innerHTML = `
       <div class="avatar${isCacheHit ? ' cache-hit-avatar' : ''}">
@@ -877,236 +730,135 @@ async function sendMessage() {
           ${badgeHtml}
           <div class="bubble-content" id="streaming-content"></div>
         </div>
-        <div class="msg-time">${now()}</div>
+        <div class="mt-1 px-1 fw-medium" style="font-size: 10px; color: #94a3b8;">${now()}</div>
       </div>`;
     msgs.appendChild(row);
-    
-    const contentEl = row.querySelector('#streaming-content');
-    contentEl.removeAttribute('id');
-    bubble = contentEl;
+    bubble = row.querySelector('#streaming-content');
+    bubble.removeAttribute('id');
   }
 
   try {
-    const currentTemp = parseFloat(document.getElementById('tempSlider').value);
-
+    const tempSlider = document.querySelector('.temp-slider-input');
+    const currentTemp = parseFloat(tempSlider ? tempSlider.value : 0.2);
     const response = await fetch('/api/v1/ask', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-session-id': currentSessionId
-      },
-      body: JSON.stringify({ 
-        question: text, 
-        temperature: currentTemp,
-        use_answer_cache: enableAnswerCache,
-        use_multi_query_cache: enableMQCache
-      })
+      headers: { 'Content-Type': 'application/json', 'x-session-id': currentSessionId },
+      body: JSON.stringify({ question: text, temperature: currentTemp, use_answer_cache: enableAnswerCache, use_multi_query_cache: enableMQCache })
     });
 
     if (!response.ok) {
-      removeTyping();
-      const errorData = await response.json();
-      if (response.status === 202) {
-        appendMessage('bot', `⏳ ${errorData.detail}`);
-      } else if (response.status === 404) {
-        clearFiles();
-        appendMessage('bot', `⚠️ ${errorData.detail} Your document list has been cleared.`);
-      } else {
-        appendMessage('bot', `⚠️ Error: ${errorData.detail}`);
-      }
+      removeTyping(); const err = await response.json();
+      if (response.status === 202) appendMessage('bot', `⏳ ${err.detail}`);
+      else if (response.status === 404) { clearFiles(); appendMessage('bot', `⚠️ ${err.detail}`); }
+      else appendMessage('bot', `⚠️ Error: ${err.detail}`);
       return;
     }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");
-    let done = false;
-    let buffer = "";
-    let fullText = "";
+    let buffer = ""; let fullText = "";
 
-    while (!done) {
-      const { value, done: readerDone } = await reader.read();
-      done = readerDone;
-      if (value) {
-        buffer += decoder.decode(value, { stream: true });
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-        let bIndex;
-        while ((bIndex = buffer.indexOf('\n\n')) !== -1) {
-            const messageStr = buffer.slice(0, bIndex);
-            buffer = buffer.slice(bIndex + 2);
-
-            const lines = messageStr.split('\n');
-            for (let line of lines) {
-                if (!line.startsWith('data: ')) continue;
-                const dataContent = line.slice(6);
-
-                if (dataContent.trim() === '[DONE]') {
-                    done = true;
-                    break;
-                } else if (dataContent.trim() === '[CACHE_HIT]') {
-                    isCacheHit = true;
-                } else if (dataContent.trim() === '[CACHE_MISS]') {
-                    isCacheHit = false;
-                } else if (dataContent.startsWith('[ERROR]')) {
-                    ensureBotBubble();
-                    const errSpan = document.createElement('span');
-                    errSpan.style.color = '#ef4444';
-                    errSpan.textContent = dataContent;
-                    bubble.appendChild(document.createElement('br'));
-                    bubble.appendChild(errSpan);
-                } else if (dataContent.startsWith('[CONTEXT]: ')) {
-                    try {
-                        const chunksData = JSON.parse(dataContent.slice(11));
-                        renderChunks(chunksData, isCacheHit);
-                    } catch (e) {
-                        console.error('Error parsing context JSON:', e);
-                    }
-                } else {
-                    ensureBotBubble();
-                    fullText += dataContent;
-                    bubble.textContent = fullText;
-                    msgs.scrollTop = msgs.scrollHeight;
-                }
-            }
-        }
+      let bIndex;
+      while ((bIndex = buffer.indexOf('\n\n')) !== -1) {
+          const messageStr = buffer.slice(0, bIndex);
+          buffer = buffer.slice(bIndex + 2);
+          for (let line of messageStr.split('\n')) {
+              if (!line.startsWith('data: ')) continue;
+              const dataContent = line.slice(6);
+              if (dataContent.trim() === '[DONE]') break;
+              else if (dataContent.trim() === '[CACHE_HIT]') isCacheHit = true;
+              else if (dataContent.trim() === '[CACHE_MISS]') isCacheHit = false;
+              else if (dataContent.startsWith('[ERROR]')) { ensureBotBubble(); bubble.innerHTML += `<br><span class="text-danger">${dataContent}</span>`; }
+              else if (dataContent.startsWith('[CONTEXT]: ')) {
+                  try { renderChunks(JSON.parse(dataContent.slice(11)), isCacheHit); } catch(e){}
+              } else {
+                  ensureBotBubble(); fullText += dataContent;
+                  bubble.textContent = fullText; msgs.scrollTop = msgs.scrollHeight;
+              }
+          }
       }
     }
-
     if (fullText && bubble) {
-      bubble.innerHTML = fullText
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>');
+      bubble.innerHTML = fullText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     }
   } catch (err) {
-    removeTyping();
-    appendMessage('bot', "⚠️ Connection error. Is the server running?");
-    console.error(err);
+    removeTyping(); appendMessage('bot', "⚠️ Connection error. Is the server running?");
   } finally {
-    removeTyping();
-    isStreaming = false;
-    updateUIState();
-    fetchCacheStats();
+    removeTyping(); isStreaming = false; updateUIState(); fetchCacheStats();
   }
 }
 
 // ── Chunks ─────────────────────────────────────────────────────────────────
 function clearChunks() {
   document.getElementById('chunks').innerHTML = `
-    <div class="empty-ctx">
-      <div class="empty-icon">📭</div>
-      <p>Ask a question to see retrieved chunks here</p>
+    <div class="text-center p-4" style="color: #94a3b8;">
+      <div style="font-size: 36px; margin-bottom: 10px; opacity: 0.8;">📭</div>
+      <p style="font-size: 13px; font-weight: 500;">Ask a question to see retrieved chunks here</p>
     </div>`;
-  document.getElementById('ctxSub').textContent =
-    `${reranker ? '✨ Reranker active' : 'Direct retrieval'} · 0 chunks`;
+  const subText = `${reranker ? '✨ Reranker active' : 'Direct retrieval'} · 0 chunks`;
+  if(document.getElementById('ctxSub')) document.getElementById('ctxSub').textContent = subText;
+  if(document.getElementById('ctxSubMobile')) document.getElementById('ctxSubMobile').textContent = subText;
 }
 
 function renderChunks(chunks, isCacheHit = false) {
-  const el = document.getElementById('chunks');
-  if (!chunks || chunks.length === 0) {
-      clearChunks();
-      return;
-  }
+  if (!chunks || !chunks.length) return clearChunks();
   
-  const buildCard = (c) => {
-      return `
-        <div class="chunk-card${isCacheHit ? ' cache-hit-card' : ''}">
-          <div class="chunk-top">
-            <div class="chunk-src">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-              </svg>
-              ${c.source}
-            </div>
-          </div>
-          <div class="chunk-text" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">${c.text}</div>
-        </div>`;
-  };
+  const buildCard = (c) => `
+    <div class="chunk-card${isCacheHit ? ' cache-hit-card' : ''}">
+      <div class="d-flex align-items-center gap-1 mb-2 fw-bold" style="font-size: 11px; color: ${isCacheHit ? '#059669' : '#7c3aed'};">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        ${c.source}
+      </div>
+      <div style="font-size: 12px; color: #334155; line-height: 1.6; max-height: 250px; overflow-y: auto;">${c.text}</div>
+    </div>`;
 
   let html = buildCard(chunks[0]);
-
   if (chunks.length > 1) {
-      const others = chunks.slice(1).map(buildCard).join('');
       html += `
-        <details style="margin-top: 10px; cursor: pointer;">
-          <summary style="font-size: 11px; color: ${isCacheHit ? '#059669' : '#7c3aed'}; font-weight: 700; padding: 4px; outline: none; user-select: none;">
+        <details class="mt-2" style="cursor: pointer;">
+          <summary class="fw-bold p-1" style="font-size: 11px; color: ${isCacheHit ? '#059669' : '#7c3aed'}; outline: none; user-select: none;">
             View remaining ${chunks.length - 1} retrieved chunks...
           </summary>
-          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-            ${others}
+          <div class="d-flex flex-column gap-2 mt-2">
+            ${chunks.slice(1).map(buildCard).join('')}
           </div>
-        </details>
-      `;
+        </details>`;
   }
 
-  el.innerHTML = html;
-  document.getElementById('ctxSub').textContent = isCacheHit
-    ? `⚡ Semantic cache hit · ${chunks.length} chunks`
-    : `${reranker ? '✨ Reranker active' : 'Direct retrieval'} · ${chunks.length} chunks`;
+  document.getElementById('chunks').innerHTML = html;
+  const subText = isCacheHit ? `⚡ Semantic cache hit · ${chunks.length} chunks` : `${reranker ? '✨ Reranker active' : 'Direct retrieval'} · ${chunks.length} chunks`;
+  if(document.getElementById('ctxSub')) document.getElementById('ctxSub').textContent = subText;
+  if(document.getElementById('ctxSubMobile')) document.getElementById('ctxSubMobile').textContent = subText;
+  
+  // Auto open right panel on mobile if it has context
+  if(window.innerWidth < 992) {
+      const rightPanel = document.getElementById('rightPanel');
+      const bsOffcanvas = bootstrap.Offcanvas.getInstance(rightPanel) || new bootstrap.Offcanvas(rightPanel);
+      bsOffcanvas.show();
+  }
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-function updateTemp(val) {
-  document.getElementById('tempVal').textContent = parseFloat(val).toFixed(2);
+function updateTemp(val) { 
+  document.querySelectorAll('.temp-val-display').forEach(el => el.textContent = parseFloat(val).toFixed(2)); 
+  document.querySelectorAll('.temp-slider-input').forEach(el => el.value = val);
 }
+function toggleAnswerCache() { enableAnswerCache = !enableAnswerCache; document.querySelectorAll('.answer-cache-toggle').forEach(el => el.classList.toggle('on', enableAnswerCache)); }
+function toggleMQCache() { enableMQCache = !enableMQCache; document.querySelectorAll('.mq-cache-toggle').forEach(el => el.classList.toggle('on', enableMQCache)); }
 
-function toggleAnswerCache() {
-  enableAnswerCache = !enableAnswerCache;
-  document.getElementById('answerCacheToggle').classList.toggle('on', enableAnswerCache);
-}
-
-function toggleMQCache() {
-  enableMQCache = !enableMQCache;
-  document.getElementById('mqCacheToggle').classList.toggle('on', enableMQCache);
-}
-
-function toggleContext() {
-  showCtx = !showCtx;
-  document.getElementById('contextToggle').classList.toggle('on', showCtx);
-  document.getElementById('rightPanel').classList.toggle('hidden', !showCtx);
-}
-
-// ── Redis Cache Management ──────────────────────────────────────────────────
+// ── Cache Stats ────────────────────────────────────────────────────────────
 async function fetchCacheStats() {
   try {
     const res = await fetch('/api/v1/cache/stats');
     if (!res.ok) return;
     const data = await res.json();
-    const badge = document.getElementById('redisKeyBadge');
-    const details = document.getElementById('redisDetails');
-    
-    if (badge && details) {
-      if (data.connected) {
-        badge.textContent = `${data.total_keys} cached`;
-        badge.style.background = '#dcfce7';
-        badge.style.color = '#047857';
-        details.textContent = `Answer: ${data.semantic_cache_count} | Multi-Query: ${data.multi_query_cache_count}`;
-      } else {
-        badge.textContent = 'Offline';
-        badge.style.background = '#fee2e2';
-        badge.style.color = '#b91c1c';
-        details.textContent = 'Redis offline';
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to fetch cache stats:', e);
-  }
-}
-
-async function clearRedisCache() {
-  try {
-    const res = await fetch('/api/v1/cache/clear', { method: 'DELETE' });
-    const data = await res.json();
-    if (data.cleared) {
-      appendMessage('bot', `🧹 Purged ${data.count} Redis cache key(s).`);
-      fetchCacheStats();
-    } else {
-      appendMessage('bot', `⚠️ Could not clear Redis cache: ${data.error || 'Unknown error'}`);
-    }
-  } catch (e) {
-    console.error('Failed to clear cache:', e);
-  }
+    console.log("Cache stats:", data);
+  } catch (e) { }
 }
 </script>
 </body>
