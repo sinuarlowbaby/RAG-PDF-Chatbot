@@ -54,6 +54,41 @@ async def delete_session(session_id: str, request: Request):
     return {"deleted": True, "session_id": session_id}
 
 
+@chat_router.get("/cache/stats", tags=["Cache"])
+async def get_cache_stats(request: Request):
+    """Return Redis connectivity status and key counts for the UI cache badge."""
+    redis = request.app.state.redis
+    try:
+        redis.ping()
+        all_keys            = redis.keys("*")
+        semantic_keys       = redis.keys("semantic_cache:*")
+        multi_query_keys    = redis.keys("multi_query:*")
+        return {
+            "connected":              True,
+            "total_keys":             len(all_keys),
+            "semantic_cache_count":   len(semantic_keys),
+            "multi_query_cache_count": len(multi_query_keys),
+        }
+    except Exception as exc:
+        logger.warning(f"Redis ping failed: {exc}")
+        return {"connected": False, "total_keys": 0,
+                "semantic_cache_count": 0, "multi_query_cache_count": 0}
+
+
+@chat_router.delete("/cache/clear", tags=["Cache"])
+async def clear_cache(request: Request):
+    """Flush all semantic-cache and multi-query-cache keys from Redis."""
+    redis = request.app.state.redis
+    try:
+        keys = redis.keys("semantic_cache:*") + redis.keys("multi_query:*")
+        if keys:
+            redis.delete(*keys)
+        return {"cleared": True, "count": len(keys)}
+    except Exception as exc:
+        logger.error(f"Cache clear failed: {exc}")
+        return {"cleared": False, "error": str(exc)}
+
+
 def _scroll_all_session_docs(client, session_id: str) -> list[Document]:
     """Paginate through ALL Qdrant records for a session, avoiding the 1000-record hard limit."""
     doc_chunks: list[Document] = []
