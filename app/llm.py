@@ -69,6 +69,8 @@ def _llm_stream(user_prompt: str, temperature: float) -> Generator[str, None, No
         ],
         temperature=temperature,
         stream=True,
+        reasoning_effort="default",
+        reasoning_format="hidden"
     )
 
     for chunk in response_generator:
