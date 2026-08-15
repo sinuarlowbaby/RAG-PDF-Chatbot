@@ -9,14 +9,14 @@ from llm import llm_client, generate_queries
 from retrieval.build_context import build_context
 from retrieval.hybrid import retrieve_hybrid_documents
 from retrieval.deduplication import deduplication
-from retrieval.reranker import rerank_documents
+from retrieval.reranker import rerank_documents_async
 from utils.semantic_cache import semantic_cache_match, store_semantic_cache
 
 logger = logging.getLogger(__name__)
 
 
 @traceable(name="RAG_Query_Pipeline")
-def query_pipeline(
+async def query_pipeline(
     vector_store,
     user_query,
     hybrid_retriever,
@@ -73,7 +73,7 @@ def query_pipeline(
     yield "[CACHE_MISS]"
     all_docs = retrieve_hybrid_documents(hybrid_retriever, all_query)
     unique_docs = deduplication(all_docs, k=10)
-    reranked_docs = rerank_documents(user_query, unique_docs, reranker=reranker_model)
+    reranked_docs = await rerank_documents_async(user_query, unique_docs, reranker=reranker_model)
     retrieved_context = build_context(reranked_docs)
 
     chunk_data = []

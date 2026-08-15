@@ -153,7 +153,7 @@ async def ask(request: Request, query: QueryRequest, x_session_id: str = Header(
 
     redis_client = request.app.state.redis
 
-    def stream_token():
+    async def stream_token():
         try:
             response_generator = query_pipeline(
                 vector_store,
@@ -168,7 +168,7 @@ async def ask(request: Request, query: QueryRequest, x_session_id: str = Header(
                 use_answer_cache=query.use_answer_cache,
                 use_multi_query_cache=query.use_multi_query_cache,
             )
-            for chunk in response_generator:
+            async for chunk in response_generator:
                 yield f"data: {chunk}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as e:

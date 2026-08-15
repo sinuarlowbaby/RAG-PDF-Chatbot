@@ -77,6 +77,7 @@ if settings.groq_api_key:
 # ── Import Routers AFTER setting os.environ ──────────────────────────────────
 from routes.chat_router import chat_router
 from routes.upload_router import upload_router
+from retrieval.reranker import init_reranker_pool, shutdown_reranker_pool
 from schema.llm_schemas import HealthResponse
 
 # ── Bootstrap logging first, before any logger is created ────────────────────
@@ -113,6 +114,11 @@ async def lifespan(app: FastAPI):
 
         # ── Cross-encoder reranker ────────────────────────────────────────────
         app.state.reranker = CrossEncoder(settings.reranker_model)
+
+        # ── Reranker thread pool (must be after CrossEncoder loads) ───────────
+        # max_workers=1 matches WEB_CONCURRENCY=1 on t2.micro (1 vCPU).
+        # Raise both values when scaling to multi-worker / multi-core deployments.
+        init_reranker_pool(max_workers=1, max_concurrent=4)
 
         # ── OpenAI embeddings (shared, not per-request) ───────────────────────
         app.state.embedding_model = OpenAIEmbeddings(
@@ -153,6 +159,7 @@ async def lifespan(app: FastAPI):
 
     # ── Shutdown ──────────────────────────────────────────────────────────────
     logger.info("Shutting down RAG pipeline...")
+    shutdown_reranker_pool()          # waits for in-flight reranks to finish
     app.state.qdrant_client.close()
     logger.info("RAG pipeline shut down successfully.")
 

@@ -62,7 +62,7 @@ from langsmith import traceable
 def _llm_stream(user_prompt: str, temperature: float) -> Generator[str, None, None]:
     """Stream the Groq response directly to the client."""
     response_generator = _groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="qwen/qwen3.6-27b",
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
@@ -133,15 +133,16 @@ Example output:
 """
     try:
         response = _groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3.6-27b",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_query},
             ],
             temperature=0.3,
         )
-
-        queries = json.loads(response.choices[0].message.content.strip())
+        queries = []
+        queries.append(user_query)
+        queries.extend(json.loads(response.choices[0].message.content.strip()))
     except Exception:
         logger.warning("Multi-query parse failed — falling back to original query")
         queries = [user_query]
